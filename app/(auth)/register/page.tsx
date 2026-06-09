@@ -13,10 +13,11 @@ import { cn } from "@/lib/utils";
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [phoneDigits, setPhoneDigits] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     const formData = new FormData(e.currentTarget);
@@ -30,6 +31,17 @@ export default function RegisterPage() {
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
       return;
+    }
+
+    const digits = phoneDigits.trim();
+    if (digits) {
+      if (!/^\d{9}$/.test(digits)) {
+        setError("Phone number must be exactly 9 digits after +94 (e.g. 771234567).");
+        return;
+      }
+      formData.set("phone", "+94" + digits);
+    } else {
+      formData.delete("phone");
     }
 
     startTransition(async () => {
@@ -97,7 +109,24 @@ export default function RegisterPage() {
             <Label htmlFor="phone">
               Phone <span className="text-muted-foreground text-xs">(optional)</span>
             </Label>
-            <Input id="phone" name="phone" type="tel" placeholder="+94 77 XXX XXXX" autoComplete="tel" />
+            <div className="flex">
+              <span className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground select-none">
+                +94
+              </span>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                inputMode="numeric"
+                placeholder="771234567"
+                maxLength={9}
+                value={phoneDigits}
+                onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, ""))}
+                autoComplete="tel-national"
+                className="rounded-l-none"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Enter 9 digits after +94, e.g. 771234567</p>
           </div>
 
           <div className="space-y-1.5">

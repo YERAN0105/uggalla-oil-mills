@@ -59,7 +59,7 @@ export function Footer() {
         <div className="py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div className="sm:col-span-2 lg:col-span-1">
-            <BrandLogo variant="full" href="/" className="[&_img]:brightness-0 [&_img]:invert mb-4" />
+            <BrandLogo variant="full" href="/" className="mb-4" />
             <p className="text-sm leading-relaxed text-white/60 mb-5">
               Pure coconut oil, naturally pressed at our mill in Padukka, Sri Lanka since generations.
             </p>

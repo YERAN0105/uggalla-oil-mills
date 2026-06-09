@@ -7,6 +7,10 @@
 import { createClient } from "@supabase/supabase-js";
 import * as dotenv from "dotenv";
 import * as path from "path";
+import ws from "ws";
+// Node.js < 22 has no native WebSocket — polyfill before Supabase client initialises
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(global as any).WebSocket = ws;
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
 

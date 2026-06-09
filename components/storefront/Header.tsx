@@ -4,10 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
-import { Menu, X, Search, Heart, ShoppingCart, User } from "lucide-react";
+import { Menu, X, Heart, ShoppingCart, User } from "lucide-react";
 import { BrandLogo } from "@/components/shared/BrandLogo";
 import { Container } from "@/components/shared/Container";
 import { Button } from "@/components/ui/button";
+import { SearchBar } from "@/components/storefront/SearchBar";
+import { useWishlistStore } from "@/stores/wishlistStore";
 import { cn } from "@/lib/utils";
 import { brand } from "@/lib/brand";
 
@@ -23,6 +25,7 @@ export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const wishlistCount = useWishlistStore((s) => s.items.length);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
@@ -30,7 +33,6 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
@@ -79,25 +81,39 @@ export function Header() {
 
             {/* Right actions */}
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" aria-label="Search" asChild>
-                <Link href="/shop?search=true">
-                  <Search className="h-5 w-5" />
-                </Link>
-              </Button>
-              <Button variant="ghost" size="icon" aria-label="Wishlist" asChild className="hidden sm:inline-flex">
+              {/* Search (desktop) */}
+              <div className="hidden sm:block">
+                <SearchBar />
+              </div>
+
+              {/* Wishlist with count badge */}
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Wishlist (${wishlistCount} items)`}
+                asChild
+                className="hidden sm:inline-flex relative"
+              >
                 <Link href="/account/wishlist">
                   <Heart className="h-5 w-5" />
+                  {wishlistCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-red-400 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                      {wishlistCount > 9 ? "9+" : wishlistCount}
+                    </span>
+                  )}
                 </Link>
               </Button>
+
               <Button variant="ghost" size="icon" aria-label="Account" asChild className="hidden sm:inline-flex">
                 <Link href="/account">
                   <User className="h-5 w-5" />
                 </Link>
               </Button>
+
+              {/* Cart — wired in Phase 3 */}
               <Button variant="ghost" size="icon" aria-label="Cart (0 items)" className="relative" asChild>
                 <Link href="/cart">
                   <ShoppingCart className="h-5 w-5" />
-                  {/* Cart badge placeholder — wired in Phase 3 */}
                   <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-gold text-green-deep text-[10px] font-bold flex items-center justify-center leading-none">
                     0
                   </span>
@@ -126,7 +142,6 @@ export function Header() {
       <AnimatePresence>
         {mobileOpen && (
           <>
-            {/* Backdrop */}
             <m.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -136,7 +151,6 @@ export function Header() {
               onClick={() => setMobileOpen(false)}
               aria-hidden="true"
             />
-            {/* Drawer */}
             <m.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -156,6 +170,11 @@ export function Header() {
                 >
                   <X className="h-5 w-5" />
                 </Button>
+              </div>
+
+              {/* Mobile search */}
+              <div className="px-5 pt-4">
+                <SearchBar className="w-full" />
               </div>
 
               <nav className="flex-1 overflow-y-auto p-5 flex flex-col gap-1">
@@ -181,9 +200,14 @@ export function Header() {
                     <User className="h-4 w-4" /> My Account
                   </Link>
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2" asChild>
+                <Button variant="outline" className="w-full justify-start gap-2 relative" asChild>
                   <Link href="/account/wishlist">
                     <Heart className="h-4 w-4" /> Wishlist
+                    {wishlistCount > 0 && (
+                      <span className="ml-auto bg-red-400 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                        {wishlistCount}
+                      </span>
+                    )}
                   </Link>
                 </Button>
               </div>

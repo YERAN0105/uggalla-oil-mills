@@ -117,8 +117,8 @@ export default function HomePage() {
         {/* Background image */}
         <div className="absolute inset-0">
           <Image
-            src="https://images.unsplash.com/photo-1631390519301-6ee7a26b5b63?w=1800&q=85"
-            alt="Golden coconut oil in a bottle surrounded by fresh coconuts"
+            src="/hero.jpeg"
+            alt="Uggalla Oil Mills shop in Padukka, Sri Lanka"
             fill
             className="object-cover object-center opacity-40"
             priority
@@ -186,8 +186,8 @@ export default function HomePage() {
             <FadeIn direction="right">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/3]">
                 <Image
-                  src="https://images.unsplash.com/photo-1548013146-72479768bada?w=800&q=80"
-                  alt="Traditional coconut oil press at the Uggalla mill in Padukka"
+                  src="/hero.jpeg"
+                  alt="Uggalla Oil Mills shop in Padukka, Sri Lanka"
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"
