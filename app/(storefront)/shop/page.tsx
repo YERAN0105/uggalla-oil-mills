@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { FilterSidebar } from "@/components/storefront/FilterSidebar";
 import { ProductGrid } from "@/components/storefront/ProductGrid";
@@ -80,6 +82,15 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
               ? `${totalCount} product${totalCount !== 1 ? "s" : ""} found`
               : "Pure, naturally pressed coconut oil — bottles, packets, and bulk wholesale."}
           </p>
+          {hasQuery && (
+            <Link
+              href="/shop"
+              className="inline-flex items-center gap-1.5 mt-4 text-sm font-medium text-gold hover:text-white transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to all products
+            </Link>
+          )}
         </Container>
       </div>
 

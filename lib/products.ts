@@ -74,6 +74,18 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
     if (sizeFilteredIds.length === 0) return { products: [], totalCount: 0 };
   }
 
+  // Resolve product IDs that have at least one size within the price range.
+  // Filtering on base_price would be wrong — the displayed price comes from product_sizes.
+  let priceFilteredIds: string[] | undefined;
+  if (filters.priceMin !== undefined || filters.priceMax !== undefined) {
+    let priceQuery = supabase.from("product_sizes").select("product_id");
+    if (filters.priceMin !== undefined) priceQuery = priceQuery.gte("price", filters.priceMin);
+    if (filters.priceMax !== undefined) priceQuery = priceQuery.lte("price", filters.priceMax);
+    const { data } = await priceQuery;
+    priceFilteredIds = [...new Set(data?.map((s) => s.product_id) ?? [])];
+    if (priceFilteredIds.length === 0) return { products: [], totalCount: 0 };
+  }
+
   let query = supabase
     .from("products")
     .select(PRODUCT_SELECT, { count: "exact" })
@@ -83,8 +95,7 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
   if (categoryIds?.length) query = query.in("category_id", categoryIds);
   if (brandIds?.length) query = query.in("brand_id", brandIds);
   if (sizeFilteredIds?.length) query = query.in("id", sizeFilteredIds);
-  if (filters.priceMin !== undefined) query = query.gte("base_price", filters.priceMin);
-  if (filters.priceMax !== undefined) query = query.lte("base_price", filters.priceMax);
+  if (priceFilteredIds?.length) query = query.in("id", priceFilteredIds);
   if (filters.featured) query = query.eq("is_featured", true);
   if (filters.bestseller) query = query.eq("is_bestseller", true);
   if (filters.purchaseType) query = query.eq("purchase_type", filters.purchaseType);
