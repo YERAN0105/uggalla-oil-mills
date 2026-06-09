@@ -141,6 +141,156 @@ export type Database = {
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
       };
+      product_images: {
+        Row: {
+          id: string;
+          product_id: string;
+          url: string;
+          alt_text: string | null;
+          display_order: number;
+          is_primary: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          url: string;
+          alt_text?: string | null;
+          display_order?: number;
+          is_primary?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["product_images"]["Insert"]>;
+      };
+      product_sizes: {
+        Row: {
+          id: string;
+          product_id: string;
+          label: string;
+          volume_ml: number | null;
+          price: number;
+          display_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          label: string;
+          volume_ml?: number | null;
+          price: number;
+          display_order?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["product_sizes"]["Insert"]>;
+      };
+      bulk_requests: {
+        Row: {
+          id: string;
+          product_id: string | null;
+          user_id: string | null;
+          name: string;
+          email: string;
+          phone: string;
+          fulfillment_type: "delivery" | "pickup";
+          address_snapshot: Json | null;
+          quantity: number;
+          unit: string;
+          preferred_date: string | null;
+          notes: string | null;
+          status: "new" | "in_progress" | "quoted" | "accepted" | "rejected" | "completed";
+          quoted_unit_price: number | null;
+          quoted_total: number | null;
+          quote_message: string | null;
+          payment_mode: "offline" | "online";
+          quote_token: string | null;
+          quote_expires_at: string | null;
+          internal_notes: string | null;
+          converted_order_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id?: string | null;
+          user_id?: string | null;
+          name: string;
+          email: string;
+          phone: string;
+          fulfillment_type?: "delivery" | "pickup";
+          address_snapshot?: Json | null;
+          quantity: number;
+          unit?: string;
+          preferred_date?: string | null;
+          notes?: string | null;
+          status?: "new" | "in_progress" | "quoted" | "accepted" | "rejected" | "completed";
+          quoted_unit_price?: number | null;
+          quoted_total?: number | null;
+          quote_message?: string | null;
+          payment_mode?: "offline" | "online";
+          quote_token?: string | null;
+          quote_expires_at?: string | null;
+          internal_notes?: string | null;
+          converted_order_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["bulk_requests"]["Insert"]>;
+      };
+      bulk_request_attachments: {
+        Row: {
+          id: string;
+          bulk_request_id: string;
+          url: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          bulk_request_id: string;
+          url: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["bulk_request_attachments"]["Insert"]>;
+      };
+      reviews: {
+        Row: {
+          id: string;
+          product_id: string;
+          user_id: string;
+          order_item_id: string | null;
+          rating: number;
+          title: string | null;
+          body: string | null;
+          status: "pending" | "approved" | "hidden";
+          admin_reply: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          user_id: string;
+          order_item_id?: string | null;
+          rating: number;
+          title?: string | null;
+          body?: string | null;
+          status?: "pending" | "approved" | "hidden";
+          admin_reply?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["reviews"]["Insert"]>;
+      };
+      wishlist: {
+        Row: {
+          user_id: string;
+          product_id: string;
+          added_at: string;
+        };
+        Insert: {
+          user_id: string;
+          product_id: string;
+          added_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["wishlist"]["Insert"]>;
+      };
       newsletter_subscribers: {
         Row: {
           id: string;
@@ -202,3 +352,25 @@ export type Database = {
     };
   };
 };
+
+// ─── Derived types for convenience ────────────────────────────────────────────
+
+export type ProductImage = Database["public"]["Tables"]["product_images"]["Row"];
+export type ProductSize = Database["public"]["Tables"]["product_sizes"]["Row"];
+export type Brand = Database["public"]["Tables"]["brands"]["Row"];
+export type Category = Database["public"]["Tables"]["categories"]["Row"];
+export type Product = Database["public"]["Tables"]["products"]["Row"];
+export type BulkRequest = Database["public"]["Tables"]["bulk_requests"]["Row"];
+export type Review = Database["public"]["Tables"]["reviews"]["Row"];
+
+export type KeyFact = { label: string; value: string };
+
+export interface ProductWithRelations extends Omit<Product, "key_facts"> {
+  key_facts: KeyFact[] | null;
+  brands: Pick<Brand, "id" | "name" | "slug"> | null;
+  categories: Pick<Category, "id" | "name" | "slug" | "is_bulk">;
+  product_images: Pick<ProductImage, "id" | "url" | "alt_text" | "is_primary" | "display_order">[];
+  product_sizes: Pick<ProductSize, "id" | "label" | "volume_ml" | "price" | "display_order">[];
+  avg_rating?: number | null;
+  review_count?: number | null;
+}
