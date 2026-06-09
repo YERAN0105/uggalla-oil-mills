@@ -7,7 +7,7 @@
 -- ─── Brand: Royal Coco (bottles & packets) ──────────────────────────────────
 INSERT INTO public.brands (id, slug, name, description, image_url, display_order, is_active)
 VALUES (
-  '550e8400-e29b-41d4-a716-446655440001',
+  'a1b2c3d4-0001-0001-0001-000000000001',
   'royal-coco',
   'Royal Coco',
   'Royal Coco is the flagship retail brand of Uggalla Oil Mills — handcrafted coconut oil naturally pressed at our mill in Padukka, Sri Lanka. Every bottle and packet carries the purity and warmth of island tradition.',
@@ -42,7 +42,7 @@ ON CONFLICT (slug) DO UPDATE SET
 INSERT INTO public.categories (id, slug, name, description, image_url, display_order, is_active, is_bulk)
 VALUES
   (
-    '550e8400-e29b-41d4-a716-446655440010',
+    'b1b2c3d4-0001-0001-0001-000000000001',
     'bottles',
     'Bottles',
     'Premium coconut oil in glass and PET bottles — perfect for kitchen use, skincare, and gifting. Freshly pressed and triple-filtered.',
@@ -50,7 +50,7 @@ VALUES
     1, true, false
   ),
   (
-    '550e8400-e29b-41d4-a716-446655440011',
+    'b1b2c3d4-0001-0001-0001-000000000002',
     'packets',
     'Packets',
     'Convenient resealable packets for everyday cooking. Same pure coconut oil at a pocket-friendly price point.',
@@ -58,7 +58,7 @@ VALUES
     2, true, false
   ),
   (
-    '550e8400-e29b-41d4-a716-446655440012',
+    'b1b2c3d4-0001-0001-0001-000000000003',
     'bulk',
     'Bulk / Wholesale',
     'Loose coconut oil for restaurants, bakeries, exporters, and large households. Request a quote and we will arrange the best price for your volume.',
@@ -86,8 +86,8 @@ INSERT INTO public.products (
 VALUES (
   '660e8400-e29b-41d4-a716-446655440001',
   'royal-coco-pure-coconut-oil-bottle',
-  '550e8400-e29b-41d4-a716-446655440001',
-  '550e8400-e29b-41d4-a716-446655440010',
+  'a1b2c3d4-0001-0001-0001-000000000001',
+  'b1b2c3d4-0001-0001-0001-000000000001',
   'Royal Coco Pure Coconut Oil',
   'Cold-pressed pure coconut oil, naturally extracted at our Padukka mill. Ideal for cooking, baking, and skincare.',
   '<p>Royal Coco Pure Coconut Oil is extracted from fresh, matured coconuts grown in the coconut-rich heartland of Sri Lanka. Our cold-press process preserves all the natural goodness — rich lauric acid content, natural aroma, and a beautiful pale-gold clarity.</p><p>Perfect for high-heat cooking, baking, deep-frying, and as a natural moisturiser for skin and hair. No additives, no preservatives — just pure, wholesome coconut oil the way nature intended.</p><p>Sourced from trusted Padukka-region coconut estates, pressed at our own mill, and bottled fresh to ensure maximum purity and freshness in every drop.</p>',
@@ -99,7 +99,7 @@ VALUES (
     {"label": "Lauric Acid", "value": "≥ 48%"},
     {"label": "Free Fatty Acids", "value": "< 0.1%"}
   ]',
-  950.00,
+  320.00,
   'retail',
   true, true, 200,
   true, true, true,
@@ -110,6 +110,7 @@ VALUES (
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   short_description = EXCLUDED.short_description,
+  base_price = EXCLUDED.base_price,
   updated_at = now();
 
 -- Sizes for Pure Coconut Oil — Bottle
@@ -148,8 +149,8 @@ INSERT INTO public.products (
 VALUES (
   '660e8400-e29b-41d4-a716-446655440002',
   'royal-coco-virgin-coconut-oil-bottle',
-  '550e8400-e29b-41d4-a716-446655440001',
-  '550e8400-e29b-41d4-a716-446655440010',
+  'a1b2c3d4-0001-0001-0001-000000000001',
+  'b1b2c3d4-0001-0001-0001-000000000001',
   'Royal Coco Virgin Coconut Oil',
   'Unrefined, extra-virgin coconut oil with a delicate natural coconut aroma. The purest expression of our mill.',
   '<p>Our Virgin Coconut Oil is cold-extracted from fresh coconut milk without any heat treatment, giving it a light, natural coconut fragrance and the highest concentration of antioxidants and medium-chain fatty acids.</p><p>Ideal for raw consumption, low-heat cooking, smoothies, and premium skincare. A favourite among health-conscious households and wellness practitioners.</p><p>Unrefined, unbleached, deodorised only naturally — this is coconut oil in its most authentic form, from coconut to bottle in under 24 hours at our Padukka facility.</p>',
@@ -161,7 +162,7 @@ VALUES (
     {"label": "Lauric Acid", "value": "≥ 50%"},
     {"label": "Scent", "value": "Light natural coconut"}
   ]',
-  1350.00,
+  480.00,
   'retail',
   true, true, 200,
   true, true, false,
@@ -172,6 +173,7 @@ VALUES (
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   short_description = EXCLUDED.short_description,
+  base_price = EXCLUDED.base_price,
   updated_at = now();
 
 -- Sizes for Virgin Coconut Oil — Bottle
@@ -206,8 +208,8 @@ INSERT INTO public.products (
 VALUES (
   '660e8400-e29b-41d4-a716-446655440003',
   'royal-coco-coconut-hair-oil-bottle',
-  '550e8400-e29b-41d4-a716-446655440001',
-  '550e8400-e29b-41d4-a716-446655440010',
+  'a1b2c3d4-0001-0001-0001-000000000001',
+  'b1b2c3d4-0001-0001-0001-000000000001',
   'Royal Coco Coconut Hair Oil',
   'Traditional coconut oil enriched with curry leaf and hibiscus extracts — the classic Sri Lankan hair treatment.',
   '<p>Deeply nourishing and fragrant, our Coconut Hair Oil blends pure cold-pressed coconut oil with a traditional infusion of curry leaves and hibiscus — a recipe passed down through generations at Uggalla.</p><p>Massaged into the scalp, it promotes thickness, natural shine, and reduces breakage. Perfect for warm oil treatments, overnight conditioning, or everyday use.</p><p>Free from synthetic fragrances, sulfates, and mineral oils. A true farm-to-bottle haircare product.</p>',
@@ -218,7 +220,7 @@ VALUES (
     {"label": "Use", "value": "Hair & scalp care"},
     {"label": "Origin", "value": "Padukka, Sri Lanka"}
   ]',
-  550.00,
+  320.00,
   'retail',
   false, true, 200,
   true, false, true,
@@ -229,6 +231,7 @@ VALUES (
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   short_description = EXCLUDED.short_description,
+  base_price = EXCLUDED.base_price,
   updated_at = now();
 
 -- Sizes for Hair Oil
@@ -262,8 +265,8 @@ INSERT INTO public.products (
 VALUES (
   '660e8400-e29b-41d4-a716-446655440004',
   'royal-coco-coconut-oil-packet',
-  '550e8400-e29b-41d4-a716-446655440001',
-  '550e8400-e29b-41d4-a716-446655440011',
+  'a1b2c3d4-0001-0001-0001-000000000001',
+  'b1b2c3d4-0001-0001-0001-000000000002',
   'Royal Coco Coconut Oil — Packet',
   'The same pure coconut oil in convenient resealable packets — ideal for everyday cooking at a great value.',
   '<p>Our Packet range brings the quality of Royal Coco into an affordable, convenient format. Each packet is heat-sealed for freshness and easy to store in your pantry or use while travelling.</p><p>The same cold-pressed pure coconut oil as our bottle range — just in a lighter, more economical package. Perfect for households that use coconut oil daily for cooking, frying, and seasoning.</p>',
@@ -274,7 +277,7 @@ VALUES (
     {"label": "Origin", "value": "Padukka, Sri Lanka"},
     {"label": "Packaging", "value": "Heat-sealed pouch"}
   ]',
-  280.00,
+  165.00,
   'retail',
   true, false, 200,
   true, false, false,
@@ -285,6 +288,7 @@ VALUES (
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   short_description = EXCLUDED.short_description,
+  base_price = EXCLUDED.base_price,
   updated_at = now();
 
 -- Sizes for Packet
@@ -316,8 +320,8 @@ INSERT INTO public.products (
 VALUES (
   '660e8400-e29b-41d4-a716-446655440005',
   'royal-coco-coconut-oil-economy-packet',
-  '550e8400-e29b-41d4-a716-446655440001',
-  '550e8400-e29b-41d4-a716-446655440011',
+  'a1b2c3d4-0001-0001-0001-000000000001',
+  'b1b2c3d4-0001-0001-0001-000000000002',
   'Royal Coco Coconut Oil — Economy Packet',
   'Larger-format packets for families and frequent cooks. Best value per ml — same pure Royal Coco quality.',
   '<p>Our Economy Packet range is designed for households and small food businesses that need larger quantities without the bulk wholesale commitment. Available in 500ml and 1L resealable pouches.</p><p>Every pouch contains the same pure coconut oil extracted fresh at our Padukka mill — at our most competitive per-ml price.</p>',
@@ -339,6 +343,7 @@ VALUES (
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   short_description = EXCLUDED.short_description,
+  base_price = EXCLUDED.base_price,
   updated_at = now();
 
 -- Sizes for Economy Packet
@@ -373,7 +378,7 @@ VALUES (
   '660e8400-e29b-41d4-a716-446655440006',
   'uggalla-loose-coconut-oil-bulk',
   '550e8400-e29b-41d4-a716-446655440002',
-  '550e8400-e29b-41d4-a716-446655440012',
+  'b1b2c3d4-0001-0001-0001-000000000003',
   'Uggalla Loose Coconut Oil (Bulk)',
   'Wholesale loose coconut oil from Uggalla Oil Mills for restaurants, hotels, bakeries, and exporters. Indicative price Rs. 580 / litre — request a quote for your volume.',
   '<p>Uggalla Oil Mills supplies bulk loose coconut oil directly from our Padukka mill to restaurants, hotels, bakeries, food manufacturers, and exporters across Sri Lanka.</p><p>Our bulk oil is available in quantities from 10 litres upward, dispatched in sealed 20L cans or custom food-grade containers. The same premium cold-pressed quality as our retail range, at commercial pricing.</p><p>Request a quote below — we typically respond within 24 hours with a tailored price based on your volume and delivery location.</p>',
@@ -388,6 +393,7 @@ VALUES (
   580.00,
   'bulk_quote',
   false, true, 500,
+  false, false, false,
   false, 0, 0,
   'Uggalla Oil Mills Bulk Coconut Oil — Wholesale',
   'Wholesale bulk coconut oil from Uggalla Oil Mills, Padukka. Competitive pricing for restaurants, hotels, bakeries and exporters. Request a quote.'
@@ -395,6 +401,7 @@ VALUES (
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   short_description = EXCLUDED.short_description,
+  base_price = EXCLUDED.base_price,
   updated_at = now();
 
 -- Images for Bulk Loose Oil
@@ -422,7 +429,7 @@ VALUES (
   '660e8400-e29b-41d4-a716-446655440007',
   'uggalla-20l-can-wholesale',
   '550e8400-e29b-41d4-a716-446655440002',
-  '550e8400-e29b-41d4-a716-446655440012',
+  'b1b2c3d4-0001-0001-0001-000000000003',
   'Uggalla Oil Mills Coconut Oil — 20L Can (Wholesale)',
   'Factory-sealed 20-litre food-grade cans for large commercial buyers. Request a quote for multi-can orders.',
   '<p>Our 20-litre factory-sealed cans are designed for large commercial and institutional buyers — supermarkets, food manufacturers, export agents, and institutional kitchens.</p><p>Each can is filled fresh at our Padukka mill, nitrogen-flushed to extend shelf life, and sealed for transport. We offer multi-can pricing with island-wide delivery.</p><p>Submit a quote request below with your required quantity and we will send you a commercial offer within 24 hours.</p>',
@@ -437,6 +444,7 @@ VALUES (
   11500.00,
   'bulk_quote',
   false, true, 500,
+  false, false, false,
   false, 0, 0,
   'Uggalla Oil Mills 20L Coconut Oil Can — Wholesale',
   'Wholesale 20-litre coconut oil cans from Uggalla Oil Mills. Factory-sealed, nitrogen-flushed for extended shelf life. Request a commercial quote.'
@@ -444,6 +452,7 @@ VALUES (
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
   short_description = EXCLUDED.short_description,
+  base_price = EXCLUDED.base_price,
   updated_at = now();
 
 -- Images for 20L Can

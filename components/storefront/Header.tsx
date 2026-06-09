@@ -174,7 +174,7 @@ export function Header() {
 
               {/* Mobile search */}
               <div className="px-5 pt-4">
-                <SearchBar className="w-full" />
+                <SearchBar fullWidth onNavigate={() => setMobileOpen(false)} />
               </div>
 
               <nav className="flex-1 overflow-y-auto p-5 flex flex-col gap-1">

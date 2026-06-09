@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { X, SlidersHorizontal } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { formatCurrency } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 import type { Category, Brand } from "@/types/supabase";
@@ -17,7 +18,9 @@ interface FilterSidebarProps {
   className?: string;
 }
 
+const PRICE_MIN = 0;
 const PRICE_MAX_DEFAULT = 5000;
+const STEP = 100;
 
 export function FilterSidebar({
   categories,
@@ -30,18 +33,27 @@ export function FilterSidebar({
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
 
+  const urlMin = Number(searchParams.get("price_min") ?? 0);
+  const urlMax = Number(searchParams.get("price_max") ?? PRICE_MAX_DEFAULT);
+
   const selectedCategories = searchParams.getAll("category");
   const selectedBrands = searchParams.getAll("brand");
   const selectedSizes = searchParams.getAll("size");
-  const priceMin = Number(searchParams.get("price_min") ?? 0);
-  const priceMax = Number(searchParams.get("price_max") ?? PRICE_MAX_DEFAULT);
+
+  // Local state gives instant visual feedback while dragging
+  const [localMin, setLocalMin] = useState(urlMin);
+  const [localMax, setLocalMax] = useState(urlMax);
+
+  // Keep local state in sync when URL changes (e.g. "clear all")
+  useEffect(() => { setLocalMin(urlMin); }, [urlMin]);
+  useEffect(() => { setLocalMax(urlMax); }, [urlMax]);
 
   const hasFilters =
     selectedCategories.length > 0 ||
     selectedBrands.length > 0 ||
     selectedSizes.length > 0 ||
-    priceMin > 0 ||
-    priceMax < PRICE_MAX_DEFAULT;
+    urlMin > 0 ||
+    urlMax < PRICE_MAX_DEFAULT;
 
   const updateParams = (updater: (params: URLSearchParams) => void) => {
     startTransition(() => {
@@ -64,7 +76,16 @@ export function FilterSidebar({
     });
   };
 
+  // Single URL push only when the user releases the slider
+  const commitPrice = (min: number, max: number) => {
+    updateParams((p) => {
+      if (min <= PRICE_MIN) p.delete("price_min"); else p.set("price_min", String(min));
+      if (max >= PRICE_MAX_DEFAULT) p.delete("price_max"); else p.set("price_max", String(max));
+    });
+  };
+
   const clearAll = () => {
+
     updateParams((params) => {
       params.delete("category");
       params.delete("brand");
@@ -175,41 +196,26 @@ export function FilterSidebar({
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
           Price Range
         </h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-green-deep">
-            <span>{formatCurrency(priceMin)}</span>
-            <span className="text-muted-foreground">—</span>
-            <span>{priceMax >= PRICE_MAX_DEFAULT ? `${formatCurrency(PRICE_MAX_DEFAULT)}+` : formatCurrency(priceMax)}</span>
+        <div className="space-y-4">
+          {/* Live display — updates instantly from local state */}
+          <div className="flex items-center justify-between text-sm font-medium text-green-deep">
+            <span>{formatCurrency(localMin)}</span>
+            <span>
+              {localMax >= PRICE_MAX_DEFAULT
+                ? `${formatCurrency(PRICE_MAX_DEFAULT)}+`
+                : formatCurrency(localMax)}
+            </span>
           </div>
-          <input
-            type="range"
-            min={0}
+
+          {/* Dual-handle slider — commits to URL only on release */}
+          <Slider
+            min={PRICE_MIN}
             max={PRICE_MAX_DEFAULT}
-            step={100}
-            value={priceMin}
-            onChange={(e) =>
-              updateParams((p) => {
-                p.set("price_min", e.target.value);
-                if (Number(e.target.value) >= priceMax) p.set("price_max", e.target.value);
-              })
-            }
-            className="w-full accent-green cursor-pointer"
-            aria-label="Minimum price"
-          />
-          <input
-            type="range"
-            min={0}
-            max={PRICE_MAX_DEFAULT}
-            step={100}
-            value={priceMax}
-            onChange={(e) =>
-              updateParams((p) => {
-                p.set("price_max", e.target.value);
-                if (Number(e.target.value) <= priceMin) p.set("price_min", e.target.value);
-              })
-            }
-            className="w-full accent-green cursor-pointer"
-            aria-label="Maximum price"
+            step={STEP}
+            value={[localMin, localMax]}
+            onValueChange={([min, max]) => { setLocalMin(min); setLocalMax(max); }}
+            onValueCommit={([min, max]) => commitPrice(min, max)}
+            aria-label="Price range"
           />
         </div>
       </div>
