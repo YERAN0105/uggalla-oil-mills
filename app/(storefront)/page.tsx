@@ -25,21 +25,21 @@ const categories = [
     name: "Bottles",
     description: "Measured volumes for every home",
     image: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&q=80",
-    href: "/shop?category=bottles",
+    href: "/shop/category/bottles",
   },
   {
     slug: "packets",
     name: "Packets",
     description: "Convenient sachets & pouches",
     image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
-    href: "/shop?category=packets",
+    href: "/shop/category/packets",
   },
   {
     slug: "bulk",
     name: "Bulk / Loose",
     description: "For restaurants & industries",
     image: "https://images.unsplash.com/photo-1503792243040-7ce7f5f06085?w=600&q=80",
-    href: "/bulk-request",
+    href: "/shop/category/bulk",
     isBulk: true,
   },
 ];
@@ -277,7 +277,7 @@ export default function HomePage() {
                   </div>
                   <div className="p-4 flex items-center justify-between">
                     <span className="text-sm font-medium text-green">
-                      {cat.isBulk ? "Request a quote" : "Browse products"}
+                      {cat.isBulk ? "Browse & request quote" : "Browse products"}
                     </span>
                     <ChevronRight className="h-4 w-4 text-green transition-transform group-hover:translate-x-1" />
                   </div>

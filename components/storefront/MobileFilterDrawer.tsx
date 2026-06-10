@@ -16,12 +16,18 @@ interface MobileFilterDrawerProps {
   categories: Category[];
   brands: Brand[];
   availableSizes: string[];
+  hideCategories?: boolean;
+  hideBrands?: boolean;
+  hideSizes?: boolean;
 }
 
 export function MobileFilterDrawer({
   categories,
   brands,
   availableSizes,
+  hideCategories = false,
+  hideBrands = false,
+  hideSizes = false,
 }: MobileFilterDrawerProps) {
   const [open, setOpen] = useState(false);
 
@@ -47,6 +53,9 @@ export function MobileFilterDrawer({
             categories={categories}
             brands={brands}
             availableSizes={availableSizes}
+            hideCategories={hideCategories}
+            hideBrands={hideBrands}
+            hideSizes={hideSizes}
           />
           <Button className="mt-4 w-full" onClick={() => setOpen(false)}>
             Apply Filters

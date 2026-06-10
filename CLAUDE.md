@@ -10,12 +10,16 @@ npm run build        # Production build
 npm run lint         # ESLint
 npm run format       # Prettier (writes files)
 npm run seed-admin   # Create admin user — requires ADMIN_SEED_EMAIL + ADMIN_SEED_PASSWORD in .env.local
+npx tsc --noEmit     # Type-check only
 ```
+
+`npm run build` fails with an `EPERM ... .next/trace` error while `npm run dev` is running (the dev server locks `.next`). To verify changes without stopping the dev server, use `npx tsc --noEmit` instead.
 
 ### Seeding Products (Phase 2)
 
-Run `supabase/seed-products.sql` in the Supabase SQL Editor after the three migrations.
-It inserts the Royal Coco brand, three categories (Bottles, Packets, Bulk), and 7 sample products with sizes and images. Idempotent — safe to re-run.
+Run `supabase/seed.sql` (base reference data) and `supabase/seed-products.sql` in the Supabase SQL Editor after the migrations. Both are idempotent — safe to re-run.
+
+`seed-products.sql` inserts two brands, three categories (Bottles, Packets, Bulk), and 7 sample products with sizes and images. **Its brand/category UUIDs must match the ones already inserted by `seed.sql`** — `seed.sql` runs first and `ON CONFLICT (slug) DO UPDATE` keeps the original UUID, so a mismatch produces a foreign-key error on the product inserts.
 
 There are no automated tests yet (added in a later phase).
 
@@ -44,11 +48,23 @@ There are no automated tests yet (added in a later phase).
 
 **Money columns** in the DB are `numeric(12,2)` — never floats. Format for display using `formatCurrency()` from `lib/brand.ts`.
 
+**Two brands, by product type.** Retail bottles and packets belong to the **Royal Coco** brand; bulk / wholesale products belong to the **Uggalla Oil Mills** brand. Bulk products are *not* Royal Coco. When adding or seeding products, assign the brand by product type, not by company name.
+
 ## Database
 
-Migrations in `supabase/migrations/` must be run in order (001 → 002 → 003) via the Supabase SQL Editor or CLI. RLS is enabled on every table. The helper function `public.is_admin()` is used throughout RLS policies — do not bypass it.
+Migrations in `supabase/migrations/` must be run in order (001 → 004) via the Supabase SQL Editor or CLI. RLS is enabled on every table. The helper function `public.is_admin()` is used throughout RLS policies — do not bypass it.
 
 The `public.users` table extends `auth.users` via a trigger (`handle_new_user`). Always upsert into `public.users` by `id`; never insert a row that doesn't have a matching `auth.users` entry.
+
+**`products.base_price` is trigger-managed (migration 004).** A trigger keeps it equal to `MIN(product_sizes.price)` on every size insert/update/delete. Treat it as read-only — never set it by hand in app code, and in the Phase 5 admin panel surface it as a calculated field (require at least one size before a product can be published, since the trigger only fires once sizes exist).
+
+## Product Price Model
+
+A product's displayed price ("from Rs. X") is the **minimum of its `product_sizes.price`**, not a single column. This has consequences:
+
+- **Display & sorting:** use `getMinPrice()` / sort by `base_price` (which the trigger keeps equal to the min size price).
+- **Price-range filtering:** query `product_sizes.price` and collect the parent product IDs — do *not* filter on `products.base_price`. See `getProducts()` in `lib/products.ts`; it resolves matching size/price/brand/category rows into ID lists first, then filters the product query by those IDs.
+- **Client/server split:** `lib/products.ts` is server-only (it imports `lib/supabase/server.ts` → `next/headers`). Pure helpers that client components need (`getMinPrice`, `getPrimaryImage`) live in `lib/product-utils.ts`. Client Components must import from `lib/product-utils`, never `lib/products`.
 
 ## Build Phases
 
@@ -72,3 +88,4 @@ Phases 1 and 2 are complete. Phases 3–6 are pending. Do not build features fro
 - `components/storefront/` — storefront-specific (Header, Footer, WhatsAppButton)
 - The `FadeIn` component (`components/shared/FadeIn.tsx`) wraps Framer Motion and respects `prefers-reduced-motion` globally via CSS in `globals.css`.
 - The Google OAuth button is conditionally rendered based on `isGoogleAuthEnabled` — the login page always works with email/password even when Google is not configured.
+- `globals.css` applies a global brand-green `:focus-visible` ring to **every** focusable element. To suppress it on a specific element (e.g. a text input styled as a borderless pill), add `focus-visible:ring-0 focus-visible:ring-offset-0` — don't remove the global rule.
