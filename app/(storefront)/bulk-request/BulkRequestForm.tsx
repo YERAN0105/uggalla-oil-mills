@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,8 @@ function FieldError({ errors }: { errors?: string[] }) {
 
 export function BulkRequestForm({ products, preselectedProductId }: BulkRequestFormProps) {
   const [state, action, pending] = useActionState(submitBulkRequest, initialState);
+  const [phoneDigits, setPhoneDigits] = useState("");
+  const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">("delivery");
 
   if (state.status === "success") {
     return (
@@ -82,16 +84,27 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
 
           <div className="space-y-1">
             <Label htmlFor="phone">Phone *</Label>
-            <Input
-              id="phone"
-              name="phone"
-              type="tel"
-              placeholder="+94771234567"
-              required
-              aria-describedby={fieldErrors.phone ? "phone-error" : undefined}
-              className={cn(fieldErrors.phone && "border-destructive")}
-            />
+            <div className="flex">
+              <span className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground select-none">
+                +94
+              </span>
+              <Input
+                id="phone"
+                type="tel"
+                inputMode="numeric"
+                placeholder="771234567"
+                maxLength={9}
+                value={phoneDigits}
+                onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, ""))}
+                autoComplete="tel-national"
+                aria-describedby={fieldErrors.phone ? "phone-error" : undefined}
+                className={cn("rounded-l-none", fieldErrors.phone && "border-destructive")}
+              />
+            </div>
+            {/* Hidden field carries the full +94 number to the server action */}
+            <input type="hidden" name="phone" value={phoneDigits ? `+94${phoneDigits}` : ""} />
             <FieldError errors={fieldErrors.phone} />
+            <p className="text-xs text-muted-foreground">Enter 9 digits after +94, e.g. 771234567</p>
           </div>
         </div>
 
@@ -187,7 +200,8 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
                 type="radio"
                 name="fulfillment_type"
                 value={opt.value}
-                defaultChecked={opt.value === "delivery"}
+                checked={fulfillmentType === opt.value}
+                onChange={() => setFulfillmentType(opt.value as "delivery" | "pickup")}
                 className="mt-0.5 accent-green"
               />
               <div>
@@ -198,23 +212,25 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
           ))}
         </div>
 
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="address_line1">Delivery Address (if delivery)</Label>
-            <Input
-              id="address_line1"
-              name="address_line1"
-              placeholder="Street address, area"
-              aria-describedby={fieldErrors.address_line1 ? "address-error" : undefined}
-              className={cn(fieldErrors.address_line1 && "border-destructive")}
-            />
-            <FieldError errors={fieldErrors.address_line1} />
+        {fulfillmentType === "delivery" && (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="address_line1">Delivery Address *</Label>
+              <Input
+                id="address_line1"
+                name="address_line1"
+                placeholder="Street address, area"
+                aria-describedby={fieldErrors.address_line1 ? "address-error" : undefined}
+                className={cn(fieldErrors.address_line1 && "border-destructive")}
+              />
+              <FieldError errors={fieldErrors.address_line1} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="address_city">City / Town</Label>
+              <Input id="address_city" name="address_city" placeholder="e.g. Colombo, Kandy" />
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="address_city">City / Town</Label>
-            <Input id="address_city" name="address_city" placeholder="e.g. Colombo, Kandy" />
-          </div>
-        </div>
+        )}
       </fieldset>
 
       {/* Preferred date & notes */}

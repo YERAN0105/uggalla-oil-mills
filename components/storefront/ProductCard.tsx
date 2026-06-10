@@ -67,15 +67,16 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
           <WishlistButton productId={product.id} productName={product.name} size="sm" />
         </div>
 
-        {/* Quick view overlay (desktop) */}
+        {/* Quick view overlay (desktop) — pointer-events-none so it never steals
+            clicks from the wishlist heart; only the button itself is clickable */}
         {onQuickView && (
-          <div className="absolute inset-0 bg-green-deep/0 group-hover:bg-green-deep/10 transition-colors duration-300 hidden md:flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
+          <div className="pointer-events-none absolute inset-0 bg-green-deep/0 group-hover:bg-green-deep/10 transition-colors duration-300 hidden md:flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100">
             <button
               onClick={(e) => {
                 e.preventDefault();
                 onQuickView(product);
               }}
-              className="bg-white text-green-deep text-xs font-semibold px-3 py-1.5 rounded-full shadow-md hover:bg-cream transition-colors translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
+              className="pointer-events-auto bg-white text-green-deep text-xs font-semibold px-3 py-1.5 rounded-full shadow-md hover:bg-cream transition-colors translate-y-2 group-hover:translate-y-0 transition-transform duration-300"
             >
               Quick View
             </button>

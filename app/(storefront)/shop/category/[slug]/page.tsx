@@ -37,11 +37,12 @@ export async function generateMetadata({ params }: CategoryPageProps): Promise<M
   const { slug } = await params;
   const category = await getCategoryBySlug(slug);
   if (!category) return { title: "Category Not Found" };
+  const categoryBrand = category.is_bulk ? brand.name : brand.productBrand;
   return {
     title: category.name,
     description:
       category.description ??
-      `Browse ${brand.productBrand} coconut oil products in the ${category.name} category.`,
+      `Browse ${categoryBrand} coconut oil products in the ${category.name} category.`,
     openGraph: {
       images: category.image_url ? [{ url: category.image_url }] : [],
     },
@@ -106,7 +107,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
             </ol>
           </nav>
           <span className="text-gold text-xs font-semibold uppercase tracking-widest">
-            {brand.productBrand}
+            {category.is_bulk ? brand.name : brand.productBrand}
           </span>
           <h1 className="font-display text-3xl sm:text-4xl font-semibold mt-1 mb-2">
             {category.name}
@@ -127,6 +128,9 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                   categories={allCategories}
                   brands={allBrands}
                   availableSizes={availableSizes}
+                  hideCategories
+                  hideBrands
+                  hideSizes={category.is_bulk}
                 />
               </Suspense>
             </div>
@@ -143,6 +147,9 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                     categories={allCategories}
                     brands={allBrands}
                     availableSizes={availableSizes}
+                    hideCategories
+                    hideBrands
+                    hideSizes={category.is_bulk}
                   />
                 </Suspense>
                 <Suspense fallback={null}>

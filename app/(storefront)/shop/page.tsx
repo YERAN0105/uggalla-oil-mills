@@ -19,7 +19,7 @@ import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Shop",
-  description: `Browse the full range of ${brand.productBrand} coconut oil products — bottles, packets, and bulk — naturally pressed in Padukka, Sri Lanka.`,
+  description: `Browse the full range of ${brand.name} coconut oil — Royal Coco bottles and packets, plus bulk wholesale — naturally pressed in Padukka, Sri Lanka.`,
 };
 
 const PAGE_SIZE = 12;
@@ -75,7 +75,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
             Our Products
           </span>
           <h1 className="font-display text-3xl sm:text-4xl font-semibold mt-1 mb-2">
-            {hasQuery ? `Results for "${query}"` : "Shop Royal Coco"}
+            {hasQuery ? `Results for "${query}"` : "Shop All Products"}
           </h1>
           <p className="text-white/70 text-sm max-w-xl">
             {hasQuery

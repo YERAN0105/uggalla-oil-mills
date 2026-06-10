@@ -74,15 +74,32 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
     if (sizeFilteredIds.length === 0) return { products: [], totalCount: 0 };
   }
 
-  // Resolve product IDs that have at least one size within the price range.
-  // Filtering on base_price would be wrong — the displayed price comes from product_sizes.
+  // Resolve product IDs that fall within the price range, from TWO sources:
+  //  1. Retail products — match if ANY of their `product_sizes` is in range
+  //     (preserves the existing "any variant in range" behaviour for sized products).
+  //  2. Bulk products — they have no sizes; their price lives in `products.base_price`,
+  //     so include products whose base_price is in range.
+  // Why the union is safe for retail: migration 004 keeps base_price = MIN(size price) for
+  // sized products, so any retail product matched via base_price is ALWAYS already matched
+  // via its sizes. The base_price source therefore only ever *adds* sizeless (bulk) products —
+  // it never changes which sized/retail products match.
   let priceFilteredIds: string[] | undefined;
   if (filters.priceMin !== undefined || filters.priceMax !== undefined) {
-    let priceQuery = supabase.from("product_sizes").select("product_id");
-    if (filters.priceMin !== undefined) priceQuery = priceQuery.gte("price", filters.priceMin);
-    if (filters.priceMax !== undefined) priceQuery = priceQuery.lte("price", filters.priceMax);
-    const { data } = await priceQuery;
-    priceFilteredIds = [...new Set(data?.map((s) => s.product_id) ?? [])];
+    let sizeQuery = supabase.from("product_sizes").select("product_id");
+    if (filters.priceMin !== undefined) sizeQuery = sizeQuery.gte("price", filters.priceMin);
+    if (filters.priceMax !== undefined) sizeQuery = sizeQuery.lte("price", filters.priceMax);
+
+    let baseQuery = supabase.from("products").select("id").is("deleted_at", null);
+    if (filters.priceMin !== undefined) baseQuery = baseQuery.gte("base_price", filters.priceMin);
+    if (filters.priceMax !== undefined) baseQuery = baseQuery.lte("base_price", filters.priceMax);
+
+    const [{ data: sizeData }, { data: baseData }] = await Promise.all([sizeQuery, baseQuery]);
+    priceFilteredIds = [
+      ...new Set([
+        ...(sizeData?.map((s) => s.product_id) ?? []),
+        ...(baseData?.map((p) => p.id) ?? []),
+      ]),
+    ];
     if (priceFilteredIds.length === 0) return { products: [], totalCount: 0 };
   }
 

@@ -16,6 +16,12 @@ interface FilterSidebarProps {
   brands: Brand[];
   availableSizes: string[];
   className?: string;
+  /** Hide the Category section — used on category pages where the category is fixed by the route */
+  hideCategories?: boolean;
+  /** Hide the Brand section — used on category pages, which are effectively single-brand */
+  hideBrands?: boolean;
+  /** Hide the Size section — used on the bulk category, whose products have no sizes */
+  hideSizes?: boolean;
 }
 
 const PRICE_MIN = 0;
@@ -27,6 +33,9 @@ export function FilterSidebar({
   brands,
   availableSizes,
   className,
+  hideCategories = false,
+  hideBrands = false,
+  hideSizes = false,
 }: FilterSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -115,7 +124,7 @@ export function FilterSidebar({
       </div>
 
       {/* Category */}
-      {categories.length > 0 && (
+      {!hideCategories && categories.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Category
@@ -141,7 +150,7 @@ export function FilterSidebar({
       )}
 
       {/* Brand */}
-      {brands.length > 0 && (
+      {!hideBrands && brands.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Brand
@@ -167,7 +176,7 @@ export function FilterSidebar({
       )}
 
       {/* Size */}
-      {availableSizes.length > 0 && (
+      {!hideSizes && availableSizes.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
             Size

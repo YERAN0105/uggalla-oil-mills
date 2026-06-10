@@ -393,7 +393,7 @@ VALUES (
   580.00,
   'bulk_quote',
   false, true, 500,
-  false, false, false,
+  true, false, false,
   false, 0, 0,
   'Uggalla Oil Mills Bulk Coconut Oil — Wholesale',
   'Wholesale bulk coconut oil from Uggalla Oil Mills, Padukka. Competitive pricing for restaurants, hotels, bakeries and exporters. Request a quote.'
@@ -444,7 +444,7 @@ VALUES (
   11500.00,
   'bulk_quote',
   false, true, 500,
-  false, false, false,
+  true, false, false,
   false, 0, 0,
   'Uggalla Oil Mills 20L Coconut Oil Can — Wholesale',
   'Wholesale 20-litre coconut oil cans from Uggalla Oil Mills. Factory-sealed, nitrogen-flushed for extended shelf life. Request a commercial quote.'

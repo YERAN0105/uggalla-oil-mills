@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
-import { Menu, X, Heart, ShoppingCart, User } from "lucide-react";
+import { Menu, X, Heart, ShoppingCart, User, ChevronDown } from "lucide-react";
 import { BrandLogo } from "@/components/shared/BrandLogo";
 import { Container } from "@/components/shared/Container";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,24 @@ import { useWishlistStore } from "@/stores/wishlistStore";
 import { cn } from "@/lib/utils";
 import { brand } from "@/lib/brand";
 
-const navLinks = [
+type NavLink = {
+  href: string;
+  label: string;
+  dropdown?: { href: string; label: string }[];
+};
+
+const navLinks: NavLink[] = [
   { href: "/", label: "Home" },
-  { href: "/shop", label: "Shop" },
+  {
+    href: "/shop",
+    label: "Shop",
+    dropdown: [
+      { href: "/shop", label: "All Products" },
+      { href: "/shop/category/bottles", label: "Bottles" },
+      { href: "/shop/category/packets", label: "Packets" },
+      { href: "/shop/category/bulk", label: "Bulk / Wholesale" },
+    ],
+  },
   { href: "/bulk-request", label: "Bulk Orders" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
@@ -63,20 +78,67 @@ export function Header() {
 
             {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-1" aria-label="Main navigation">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150",
-                    pathname === link.href
-                      ? "text-green font-semibold"
-                      : "text-green-deep/70 hover:text-green hover:bg-sand"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {navLinks.map((link) => {
+                const isActive =
+                  link.dropdown && link.href === "/shop"
+                    ? pathname.startsWith("/shop")
+                    : pathname === link.href;
+
+                if (!link.dropdown) {
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150",
+                        isActive
+                          ? "text-green font-semibold"
+                          : "text-green-deep/70 hover:text-green hover:bg-sand"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div key={link.href} className="relative group">
+                    <Link
+                      href={link.href}
+                      onClick={(e) => e.currentTarget.blur()}
+                      className={cn(
+                        "inline-flex items-center gap-1 px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150",
+                        isActive
+                          ? "text-green font-semibold"
+                          : "text-green-deep/70 hover:text-green hover:bg-sand"
+                      )}
+                    >
+                      {link.label}
+                      <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" />
+                    </Link>
+                    {/* Dropdown — pt-2 bridges the gap so it stays open on hover */}
+                    <div className="absolute left-0 top-full pt-2 hidden group-hover:block group-focus-within:block z-50">
+                      <div className="min-w-[200px] rounded-xl border border-sand bg-cream shadow-lg overflow-hidden py-1">
+                        {link.dropdown.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={(e) => e.currentTarget.blur()}
+                            className={cn(
+                              "block px-4 py-2.5 text-sm transition-colors",
+                              pathname === item.href
+                                ? "text-green font-semibold bg-sand/60"
+                                : "text-green-deep/80 hover:text-green hover:bg-sand"
+                            )}
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </nav>
 
             {/* Right actions */}
@@ -179,18 +241,40 @@ export function Header() {
 
               <nav className="flex-1 overflow-y-auto p-5 flex flex-col gap-1">
                 {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      "flex items-center px-4 py-3 rounded-xl text-base font-medium transition-colors",
-                      pathname === link.href
-                        ? "bg-green text-white"
-                        : "text-green-deep hover:bg-sand"
+                  <div key={link.href}>
+                    <Link
+                      href={link.href}
+                      className={cn(
+                        "flex items-center px-4 py-3 rounded-xl text-base font-medium transition-colors",
+                        pathname === link.href
+                          ? "bg-green text-white"
+                          : "text-green-deep hover:bg-sand"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                    {/* Category sub-links (categories only — parent link already covers All Products) */}
+                    {link.dropdown && (
+                      <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-sand pl-3">
+                        {link.dropdown
+                          .filter((item) => item.href !== "/shop")
+                          .map((item) => (
+                            <Link
+                              key={item.href}
+                              href={item.href}
+                              className={cn(
+                                "px-3 py-2 rounded-lg text-sm transition-colors",
+                                pathname === item.href
+                                  ? "text-green font-semibold bg-sand"
+                                  : "text-green-deep/75 hover:bg-sand"
+                              )}
+                            >
+                              {item.label}
+                            </Link>
+                          ))}
+                      </div>
                     )}
-                  >
-                    {link.label}
-                  </Link>
+                  </div>
                 ))}
               </nav>
 
