@@ -149,6 +149,15 @@ values
     }'
   ),
   (
+    'bank_details',
+    '{
+      "bank_name": "Bank of Ceylon",
+      "account_name": "Uggalla Oil Mills (Pvt) Ltd",
+      "account_number": "0000 0000 0000",
+      "branch": "Padukka"
+    }'
+  ),
+  (
     'notifications',
     '{
       "email_enabled": true,

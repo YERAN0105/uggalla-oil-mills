@@ -31,7 +31,7 @@ There are no automated tests yet (added in a later phase).
 - `app/admin/` — admin panel, protected by middleware (`role = 'admin'` in `public.users`)
 - `app/(auth)/` — login/register/reset, uses server actions in `app/(auth)/actions.ts`
 - `app/auth/callback/` — Supabase OAuth callback route
-- `app/api/` — webhooks and cron endpoints (built in later phases)
+- `app/api/` — webhooks and cron endpoints (e.g. the PayHere webhook at `app/api/payments/payhere/webhook`; subscription/review crons come in Phase 6)
 
 **Supabase** is the only required service. Everything else is optional and controlled by flags in `lib/integrations.ts`. Never check `process.env` directly for optional integrations — always use the exported booleans (`isResendEnabled`, `isGoogleAuthEnabled`, `isPayHereEnabled`, `isWhatsAppEnabled`).
 
@@ -75,15 +75,33 @@ A category can be viewed two ways, and they are intentionally different:
 
 `FilterSidebar` (and `MobileFilterDrawer`) take `hideCategories` / `hideBrands` / `hideSizes` props so a page can drop filter sections that don't apply. Category pages hide Category and Brand always (the page is already scoped to one category, which maps to one brand), and hide Size on the bulk category (bulk products have no sizes). The main `/shop` shows all four.
 
+## Cart, Checkout & Orders (Phase 3)
+
+**Cart is a Zustand `persist` store** (`stores/cart.ts`, localStorage key `uggalla-cart`). `partialize` persists only `items` + `appliedCoupon` — never the transient `isDrawerOpen` flag. Pure selectors (`getSubtotal`, `getCartCount`, `computeCouponDiscount`) are exported from the store file so non-React code can use them. The drawer is global (mounted in `app/(storefront)/layout.tsx` as `<CartDrawer />`) and opened via the store's `openDrawer()`; the header `CartButton` triggers it. Only retail products may enter the cart — bulk goes through the quote flow.
+
+**The client price is never trusted.** Adding to cart calls `validateCartItem` (`lib/cart/actions.ts`) which re-fetches the product/size and returns a recomputed line. `createOrder` (`lib/checkout/actions.ts`) re-fetches *everything* again and recomputes subtotal, coupon, loyalty, delivery, tax, and total server-side before inserting. Treat any price arriving from the client as display-only.
+
+**Order writes go through the service-role admin client** (`createAdminClient`), not the RLS-bound server client. This is deliberate: guest orders (`user_id IS NULL`) and the multi-row order/items/history/coupon/loyalty/subscription/stock mutations need to bypass RLS, and **authorization is enforced in app code instead**. Follow this pattern for order-related writes; don't try to route them through RLS.
+
+**Settings are read via the admin client** (`lib/settings.ts`, server-only). The RLS policy only exposes `shop_info`/`tax`/`subscription_frequencies` publicly, but the storefront needs `cod_limits`/`bank_details`/`loyalty` for guests and non-admin users. `getSetting<T>(key, fallback)` always returns a typed value (falls back to in-file defaults). `bank_details` lives in `seed.sql`.
+
+**Guest order access uses a stateless HMAC token** (`lib/orders/token.ts`; secret = `ORDER_TOKEN_SECRET ?? CRON_SECRET ?? SUPABASE_SERVICE_ROLE_KEY`). `getOrderForView(orderNumber, token)` grants access if the token verifies *or* the logged-in user owns the order. The order-success page passes `?t=<token>`; `/orders/track` matches by order number + email/phone. Order numbers are `UOM-YYYYMMDD-XXXXXX` (Colombo date), generated in app code, not the DB default.
+
+**PayHere is fully built but gated by `isPayHereEnabled`.** Checkout only offers "Pay Online" when that flag is true, and `createOrder` rejects the `payhere` method server-side while it's false — but the redirect page (`/checkout/pay/[orderNumber]`), webhook (`/api/payments/payhere/webhook`), and `lib/payments/payhere.ts` (MD5 hash + signature verification) all exist and activate the moment merchant keys are set. The webhook always returns 200; invalid-signature payloads are logged only (never written, since `payments.order_id` is NOT NULL). Use the same "build it fully, gate the entry point" approach for other optional integrations.
+
+**Subscriptions are reminder-only** — `createOrder` inserts a `subscriptions` row (`next_reminder_date = delivery_date + interval`) for subscription-flagged items, **only for logged-in users**, and stores no payment instrument. Guests are nudged to log in; the order still proceeds without the subscription. Never add auto-charge.
+
+**Slot capacity** is a count of non-cancelled orders for a `(date, slot)` pair (`getSlotAvailability` for display, re-checked in `createOrder`). A small race window is accepted at this scale.
+
 ## Build Phases
 
-Phases 1 and 2 are complete. Phases 3–6 are pending. Do not build features from future phases when working on the current one. Each phase has a spec in `docs/PHASE_N.md` and the full spec is in `MASTER_SPEC.md`.
+Phases 1–3 are complete. Phases 4–6 are pending. Do not build features from future phases when working on the current one. Each phase has a spec in `docs/PHASE_N.md` and the full spec is in `MASTER_SPEC.md`.
 
 | Phase | Scope |
 |---|---|
 | 1 ✅ | Foundation, auth, DB schema, brand system, homepage |
 | 2 ✅ | Products, catalog, search, PDP, wishlist, bulk request form |
-| 3 | Cart, checkout, PayHere + bank transfer + COD, orders, subscriptions |
+| 3 ✅ | Cart, checkout, PayHere + bank transfer + COD, orders, subscriptions |
 | 4 | Customer account, order history, loyalty points, reviews |
 | 5 | Full admin panel |
 | 6 | Email/WhatsApp notifications, SEO, performance, Vercel deployment |

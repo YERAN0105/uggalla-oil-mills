@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/brand";
 import type { ProductWithRelations } from "@/types/supabase";
 import { getMinPrice } from "@/lib/product-utils";
-import { toast } from "sonner";
 
 interface StickyBottomBarProps {
   product: ProductWithRelations;
@@ -56,9 +55,11 @@ export function StickyBottomBar({ product, selectedPrice }: StickyBottomBarProps
               <Button
                 className="flex-shrink-0 gap-2 px-5"
                 onClick={() => {
-                  toast("Cart coming soon!", {
-                    description: "Shopping cart will be available in the next update.",
-                  });
+                  // The size/quantity/subscription controls (and the real "Add to
+                  // Cart") live above — bring them into view so the choice is explicit.
+                  document
+                    .getElementById("pdp-add-to-cart")
+                    ?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }}
               >
                 <ShoppingCart className="h-4 w-4" />

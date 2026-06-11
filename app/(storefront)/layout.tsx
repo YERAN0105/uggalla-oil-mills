@@ -1,6 +1,7 @@
 import { Header } from "@/components/storefront/Header";
 import { Footer } from "@/components/storefront/Footer";
 import { WhatsAppButton } from "@/components/storefront/WhatsAppButton";
+import { CartDrawer } from "@/components/storefront/CartDrawer";
 
 export default function StorefrontLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
       </main>
       <Footer />
       <WhatsAppButton />
+      <CartDrawer />
     </div>
   );
 }

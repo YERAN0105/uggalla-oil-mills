@@ -1,14 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { m } from "framer-motion";
 import { toast } from "sonner";
-import { Minus, Plus, Bell, ShoppingCart } from "lucide-react";
+import { Minus, Plus, Bell, ShoppingCart, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/brand";
 import { cn } from "@/lib/utils";
+import { useCartStore } from "@/stores/cart";
+import { validateCartItem } from "@/lib/cart/actions";
 import type { ProductWithRelations } from "@/types/supabase";
 
 type ProductSizeOption = ProductWithRelations["product_sizes"][0];
@@ -24,6 +27,10 @@ const INTERVALS = [
 ] as const;
 
 export function ProductOptions({ product }: ProductOptionsProps) {
+  const router = useRouter();
+  const addItem = useCartStore((s) => s.addItem);
+  const openDrawer = useCartStore((s) => s.openDrawer);
+
   const sortedSizes = [...product.product_sizes].sort(
     (a, b) => a.display_order - b.display_order
   );
@@ -36,18 +43,61 @@ export function ProductOptions({ product }: ProductOptionsProps) {
   const [wantsSubscription, setWantsSubscription] = useState(false);
   const [subscriptionInterval, setSubscriptionInterval] =
     useState<"weekly" | "biweekly" | "monthly">("monthly");
+  const [isAdding, setIsAdding] = useState(false);
 
   const lineTotal = selectedSize ? Number(selectedSize.price) * quantity : null;
+  const outOfStock = product.stock_tracked && product.stock_quantity <= 0;
 
-  const handleAddToCart = () => {
+  // Returns true if successfully added (used by both Add to Cart and Buy Now).
+  const addToCart = async (): Promise<boolean> => {
     if (!selectedSize && sortedSizes.length > 1) {
       toast.error("Please select a size first");
-      return;
+      return false;
     }
-    // Phase 3 will wire this up to cart store
-    toast("Cart coming soon!", {
-      description: "Shopping cart and checkout will be available in the next update.",
-    });
+    setIsAdding(true);
+    try {
+      const result = await validateCartItem({
+        productId: product.id,
+        sizeId: selectedSize?.id ?? null,
+        quantity,
+        note,
+        isSubscription: wantsSubscription,
+        subscriptionInterval: wantsSubscription ? subscriptionInterval : null,
+      });
+
+      if (!result.ok) {
+        toast.error(result.error);
+        return false;
+      }
+
+      addItem(result.item);
+
+      // The server drops the subscription opt-in for guests — nudge them to log in.
+      if (wantsSubscription && !result.item.isSubscription) {
+        toast.success("Added to cart", {
+          description: "Sign in to set a reorder reminder — added without a subscription for now.",
+          action: { label: "Sign in", onClick: () => router.push("/login?redirect=/cart") },
+        });
+      } else {
+        toast.success("Added to cart", { description: product.name });
+      }
+      return true;
+    } catch {
+      toast.error("Something went wrong. Please try again.");
+      return false;
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    const added = await addToCart();
+    if (added) openDrawer();
+  };
+
+  const handleBuyNow = async () => {
+    const added = await addToCart();
+    if (added) router.push("/checkout");
   };
 
   return (
@@ -229,24 +279,34 @@ export function ProductOptions({ product }: ProductOptionsProps) {
       )}
 
       {/* CTAs */}
-      <div className="flex gap-3">
-        <Button
-          onClick={handleAddToCart}
-          className="flex-1 h-12 text-base font-semibold gap-2"
-          disabled={sortedSizes.length > 1 && !selectedSize}
-        >
-          <ShoppingCart className="h-4 w-4" />
-          Add to Cart
+      {outOfStock ? (
+        <Button className="w-full h-12 text-base font-semibold" disabled>
+          Out of Stock
         </Button>
-        <Button
-          variant="outline"
-          className="h-12 px-5 font-semibold"
-          onClick={handleAddToCart}
-          disabled={sortedSizes.length > 1 && !selectedSize}
-        >
-          Buy Now
-        </Button>
-      </div>
+      ) : (
+        <div className="flex gap-3" id="pdp-add-to-cart">
+          <Button
+            onClick={handleAddToCart}
+            className="flex-1 h-12 text-base font-semibold gap-2"
+            disabled={(sortedSizes.length > 1 && !selectedSize) || isAdding}
+          >
+            {isAdding ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ShoppingCart className="h-4 w-4" />
+            )}
+            Add to Cart
+          </Button>
+          <Button
+            variant="outline"
+            className="h-12 px-5 font-semibold"
+            onClick={handleBuyNow}
+            disabled={(sortedSizes.length > 1 && !selectedSize) || isAdding}
+          >
+            Buy Now
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
