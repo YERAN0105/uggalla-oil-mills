@@ -31,6 +31,7 @@ export interface SavedAddress {
   city: string;
   postal_code: string | null;
   is_default: boolean;
+  delivery_zone_id: string | null;
 }
 
 export interface AddressSnapshot {

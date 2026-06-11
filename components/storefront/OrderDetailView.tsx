@@ -20,7 +20,7 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
 const PAYMENT_STATUS_LABEL: Record<string, string> = {
   pending: "Awaiting payment",
   pending_transfer: "Awaiting bank transfer",
-  cod: "Cash on delivery",
+  cod: "Pending — pay on delivery",
   paid: "Paid",
   rejected: "Payment rejected",
   refunded: "Refunded",
@@ -38,6 +38,21 @@ const INTERVAL_LABEL: Record<string, string> = {
   monthly: "monthly",
 };
 
+/**
+ * Display label for the payment status. For bank transfers the raw
+ * `pending_transfer` is refined by the receipt sub-state so it reads honestly:
+ * once a receipt is in, payment is "under review", not still "awaiting transfer".
+ * The DB `payment_status` stays the source of truth (admin approval → paid).
+ */
+function paymentStatusLabel(order: OrderWithItems): string {
+  if (order.payment_method === "bank_transfer" && order.payment_status === "pending_transfer") {
+    if (order.bank_receipt?.status === "rejected") return "Receipt rejected — please re-upload";
+    if (order.bank_receipt) return "Payment under review";
+    return "Awaiting bank transfer";
+  }
+  return PAYMENT_STATUS_LABEL[order.payment_status] ?? order.payment_status;
+}
+
 export function OrderDetailView({ order }: { order: OrderWithItems }) {
   const isDelivery = order.fulfillment_type === "delivery";
   const addr = order.address_snapshot;
@@ -48,7 +63,7 @@ export function OrderDetailView({ order }: { order: OrderWithItems }) {
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="secondary">{ORDER_STATUS_LABEL[order.status] ?? order.status}</Badge>
         <Badge variant={order.payment_status === "paid" ? "default" : "gold"}>
-          {PAYMENT_STATUS_LABEL[order.payment_status] ?? order.payment_status}
+          {paymentStatusLabel(order)}
         </Badge>
       </div>
 
@@ -140,9 +155,7 @@ export function OrderDetailView({ order }: { order: OrderWithItems }) {
           <p className="text-sm text-muted-foreground">
             {PAYMENT_METHOD_LABEL[order.payment_method] ?? order.payment_method}
           </p>
-          <p className="text-sm text-muted-foreground">
-            {PAYMENT_STATUS_LABEL[order.payment_status] ?? order.payment_status}
-          </p>
+          <p className="text-sm text-muted-foreground">{paymentStatusLabel(order)}</p>
         </div>
       </div>
     </div>

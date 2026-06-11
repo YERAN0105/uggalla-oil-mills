@@ -4,13 +4,16 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
-import { Menu, X, Heart, User, ChevronDown } from "lucide-react";
+import { Menu, X, Heart, User, ChevronDown, Package, LogOut } from "lucide-react";
 import { BrandLogo } from "@/components/shared/BrandLogo";
 import { Container } from "@/components/shared/Container";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/storefront/SearchBar";
 import { CartButton } from "@/components/storefront/CartButton";
+import { AccountMenu } from "@/components/storefront/AccountMenu";
 import { useWishlistStore } from "@/stores/wishlistStore";
+import { useAuthUser } from "@/hooks/useAuthUser";
+import { signOut } from "@/app/(auth)/actions";
 import { cn } from "@/lib/utils";
 import { brand } from "@/lib/brand";
 
@@ -42,6 +45,7 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const wishlistCount = useWishlistStore((s) => s.items.length);
+  const { user } = useAuthUser();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
@@ -167,11 +171,8 @@ export function Header() {
                 </Link>
               </Button>
 
-              <Button variant="ghost" size="icon" aria-label="Account" asChild className="hidden sm:inline-flex">
-                <Link href="/account">
-                  <User className="h-5 w-5" />
-                </Link>
-              </Button>
+              {/* Account avatar / menu */}
+              <AccountMenu user={user} />
 
               {/* Cart drawer trigger */}
               <CartButton />
@@ -273,21 +274,44 @@ export function Header() {
               </nav>
 
               <div className="p-5 border-t border-sand flex flex-col gap-2">
-                <Button variant="outline" className="w-full justify-start gap-2" asChild>
-                  <Link href="/account">
-                    <User className="h-4 w-4" /> My Account
-                  </Link>
-                </Button>
-                <Button variant="outline" className="w-full justify-start gap-2 relative" asChild>
-                  <Link href="/account/wishlist">
-                    <Heart className="h-4 w-4" /> Wishlist
-                    {wishlistCount > 0 && (
-                      <span className="ml-auto bg-red-400 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                        {wishlistCount}
-                      </span>
-                    )}
-                  </Link>
-                </Button>
+                {user ? (
+                  <>
+                    <Button variant="outline" className="w-full justify-start gap-2" asChild>
+                      <Link href="/account">
+                        <User className="h-4 w-4" /> My Account
+                      </Link>
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start gap-2" asChild>
+                      <Link href="/account/orders">
+                        <Package className="h-4 w-4" /> Orders
+                      </Link>
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start gap-2 relative" asChild>
+                      <Link href="/account/wishlist">
+                        <Heart className="h-4 w-4" /> Wishlist
+                        {wishlistCount > 0 && (
+                          <span className="ml-auto bg-red-400 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                            {wishlistCount}
+                          </span>
+                        )}
+                      </Link>
+                    </Button>
+                    <form action={signOut}>
+                      <Button type="submit" variant="ghost" className="w-full justify-start gap-2 text-red-600">
+                        <LogOut className="h-4 w-4" /> Logout
+                      </Button>
+                    </form>
+                  </>
+                ) : (
+                  <>
+                    <Button className="w-full" asChild>
+                      <Link href="/login?redirect=/account">Sign in</Link>
+                    </Button>
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href="/register">Create account</Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </m.div>
           </>

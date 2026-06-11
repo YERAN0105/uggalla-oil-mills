@@ -6,6 +6,7 @@ import { m } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useWishlistStore } from "@/stores/wishlistStore";
+import { toggleWishlistDb } from "@/lib/wishlist/actions";
 
 interface WishlistButtonProps {
   productId: string;
@@ -22,17 +23,26 @@ export function WishlistButton({
 }: WishlistButtonProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const { toggle, isInWishlist } = useWishlistStore();
+  const { toggle, isInWishlist, authed } = useWishlistStore();
   const saved = mounted ? isInWishlist(productId) : false;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggle(productId);
+    toggle(productId); // optimistic
     toast(saved ? `Removed from wishlist` : `Saved to wishlist`, {
       description: productName,
       duration: 2000,
     });
+    // Persist for signed-in users; revert the optimistic change on failure.
+    if (authed) {
+      toggleWishlistDb(productId).then((res) => {
+        if (!res.ok) {
+          toggle(productId);
+          toast.error(res.error);
+        }
+      });
+    }
   };
 
   return (

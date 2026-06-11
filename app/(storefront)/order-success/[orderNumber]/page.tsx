@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Bell, Building2, Copy } from "lucide-react";
+import { Bell, Building2 } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { FadeIn } from "@/components/shared/FadeIn";
 import { Button } from "@/components/ui/button";
 import { SuccessCheck } from "@/components/storefront/SuccessCheck";
 import { OrderDetailView } from "@/components/storefront/OrderDetailView";
 import { BankReceiptUpload } from "@/components/storefront/BankReceiptUpload";
+import { CopyableField } from "@/components/storefront/CopyableField";
 import { getOrderForView } from "@/lib/orders/data";
 import { signOrderToken } from "@/lib/orders/token";
 import { getBankDetails } from "@/lib/settings";
@@ -77,19 +78,17 @@ export default async function OrderSuccessPage({ params, searchParams }: Success
                 </strong>{" "}
                 to the account below, then upload your receipt so we can verify and confirm your order.
               </p>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm mb-4">
-                <dt className="text-muted-foreground">Bank</dt>
-                <dd className="text-green-deep font-medium">{bankDetails.bank_name}</dd>
-                <dt className="text-muted-foreground">Account name</dt>
-                <dd className="text-green-deep font-medium">{bankDetails.account_name}</dd>
-                <dt className="text-muted-foreground">Account no.</dt>
-                <dd className="text-green-deep font-medium flex items-center gap-2">
-                  {bankDetails.account_number}
-                  <Copy className="h-3 w-3 text-muted-foreground" />
-                </dd>
-                <dt className="text-muted-foreground">Branch</dt>
-                <dd className="text-green-deep font-medium">{bankDetails.branch}</dd>
-              </dl>
+              <div className="rounded-xl border border-sand bg-white px-4 divide-y divide-sand mb-2">
+                <CopyableField label="Bank" value={bankDetails.bank_name} />
+                <CopyableField label="Account name" value={bankDetails.account_name} copyable />
+                <CopyableField label="Account number" value={bankDetails.account_number} copyable />
+                <CopyableField label="Branch" value={bankDetails.branch} />
+                <CopyableField label="Reference" value={order.order_number} copyable />
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Please add the <strong>reference</strong> ({order.order_number}) to your transfer so we can match
+                your payment.
+              </p>
               <BankReceiptUpload
                 orderNumber={order.order_number}
                 token={token}

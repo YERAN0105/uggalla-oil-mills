@@ -2,7 +2,7 @@
 
 Premium coconut oil e-commerce platform for Uggalla Oil Mills, Padukka, Sri Lanka.
 
-**Stack:** Next.js 15 (App Router) · TypeScript · Supabase · Tailwind CSS · shadcn/ui · Framer Motion
+**Stack:** Next.js 15 (App Router) · TypeScript · Supabase (Postgres + Auth + Storage, RLS) · Tailwind CSS · shadcn/ui · Framer Motion · Zustand · Zod
 
 ---
 
@@ -58,11 +58,15 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ### Apply Migrations
 
-In your Supabase dashboard → SQL Editor, run the migrations in order:
+In your Supabase dashboard → SQL Editor, run **all** migrations in order:
 
-1. **`supabase/migrations/001_initial_schema.sql`** — all tables, types, indexes, triggers
-2. **`supabase/migrations/002_rls_policies.sql`** — Row Level Security policies
-3. **`supabase/migrations/003_storage_buckets.sql`** — Storage buckets & policies
+1. **`001_initial_schema.sql`** — all tables, types, indexes, triggers
+2. **`002_rls_policies.sql`** — Row Level Security policies
+3. **`003_storage_buckets.sql`** — Storage buckets & policies
+4. **`004_min_price_trigger.sql`** — keeps `products.base_price` = `MIN(product_sizes.price)`
+5. **`005_address_delivery_zone.sql`** — remembers a delivery zone per saved address
+6. **`006_email_has_account.sql`** — checkout "you already have an account" helper
+7. **`007_phase4_account.sql`** — account soft-delete, one-review-per-item, review delete policy
 
 > **Tip:** If you have the Supabase CLI installed:
 > ```bash
@@ -71,17 +75,12 @@ In your Supabase dashboard → SQL Editor, run the migrations in order:
 
 ### Seed Data
 
-After migrations, run the seed file to populate initial data (brand, categories, zones, slots, settings):
+After migrations, run both seed files in the SQL Editor (both are idempotent — safe to re-run):
 
-```sql
--- In Supabase SQL Editor, paste and run:
--- (contents of supabase/seed.sql)
-```
+1. **`supabase/seed.sql`** — base reference data (brands, categories, delivery zones, time slots, settings, bank details)
+2. **`supabase/seed-products.sql`** — 9 sample products (5 retail Royal Coco with sizes, 4 bulk Uggalla Oil Mills)
 
-Or with the CLI:
-```bash
-supabase db seed --db-url "your-db-connection-string"
-```
+> Run `seed.sql` **first** — `seed-products.sql` references the brand/category UUIDs it inserts.
 
 ### Create Admin User
 
@@ -126,28 +125,37 @@ The app is designed to work with **only Supabase** configured. Add these later:
 
 ```
 app/
-  (storefront)/   Homepage, shop, cart, checkout, account, static pages
+  (storefront)/   Homepage, shop, cart, checkout, account, orders/track, static pages
   (auth)/         Login, register, forgot/reset password
   admin/          Admin panel (Phase 5)
   auth/callback/  OAuth callback
-  api/            Webhooks, cron endpoints
+  api/            Webhooks (PayHere), search, cron endpoints (Phase 6)
 components/
-  ui/             Base UI components (Button, Input, Card, etc.)
+  ui/             Base UI primitives (Button, Input, Dialog, etc.)
   shared/         BrandLogo, Container, FadeIn, DropletSVG
-  storefront/     Header, Footer, WhatsAppButton
+  storefront/     Header, Footer, cart drawer, product cards, checkout, wishlist
+  account/        Account-area UI (nav, orders, subscriptions, reviews, addresses…)
 lib/
-  supabase/       client.ts, server.ts, admin.ts
-  brand.ts        Brand config (name, tagline, contact, colors)
+  supabase/       client.ts (browser), server.ts (SSR), admin.ts (service-role)
+  account/        Account data reads + server actions (orders, addresses, profile…)
+  checkout/       Order creation, coupons, slot/zone data, schema
+  orders/         Order read models, HMAC access token, status presentation, receipts
+  loyalty/        Earn/reverse points engine (server-only)
+  wishlist/       DB-backed wishlist actions + guest-merge
+  products.ts     Catalog queries (server-only)   product-utils.ts  Pure helpers (client-safe)
+  brand.ts        Brand config (name, tagline, contact, currency)
   integrations.ts Feature flags for optional services
-  date.ts         Colombo timezone helpers
-  utils.ts        cn() class merger
+  date.ts         Colombo timezone helpers          settings.ts  Typed settings reads
+stores/
+  cart.ts         Zustand cart (localStorage: uggalla-cart)
+  wishlistStore.ts Zustand wishlist (localStorage: uggalla-wishlist)
 supabase/
-  migrations/     SQL migration files (run in order)
-  seed.sql        Initial data seed
+  migrations/     SQL migration files (run 001 → 007 in order)
+  seed.sql        Base reference data    seed-products.sql  Sample products
 scripts/
   seed-admin.ts   Create admin user
 types/
-  supabase.ts     TypeScript types for DB schema
+  supabase.ts     DB schema types    checkout.ts / account.ts  Read-model types
 ```
 
 ---
@@ -157,11 +165,13 @@ types/
 | Phase | Status | What's built |
 |---|---|---|
 | Phase 1 | ✅ Done | Foundation, auth, DB schema, brand system, homepage |
-| Phase 2 | Pending | Products, catalog, search, product detail, wishlist, bulk request form |
-| Phase 3 | Pending | Cart, checkout, payments, orders, subscriptions |
-| Phase 4 | Pending | Customer account, order history, loyalty, reviews |
+| Phase 2 | ✅ Done | Products, catalog, search, product detail, wishlist UI, bulk request form |
+| Phase 3 | ✅ Done | Cart, checkout, PayHere + bank transfer + COD, orders, subscriptions, guest tracking |
+| Phase 4 | ✅ Done | Customer account: orders, invoices, subscriptions, bulk-request history, addresses, DB wishlist, loyalty, reviews, profile |
 | Phase 5 | Pending | Full admin panel |
 | Phase 6 | Pending | Email/WhatsApp notifications, SEO, performance, deployment |
+
+See `MASTER_SPEC.md` for the full spec and `docs/PHASE_N.md` for each phase's detail. Project conventions for contributors are in `CLAUDE.md`.
 
 ---
 
@@ -171,6 +181,9 @@ types/
 npm run dev          # Start dev server
 npm run build        # Production build
 npm run lint         # ESLint
-npm run format       # Prettier
+npm run format       # Prettier (writes files)
 npm run seed-admin   # Create admin user (requires ADMIN_SEED_EMAIL + ADMIN_SEED_PASSWORD in .env.local)
+npx tsc --noEmit     # Type-check only
 ```
+
+> `npm run build` fails with an `EPERM … .next/trace` error while `npm run dev` is running (the dev server locks `.next`). To verify changes without stopping the dev server, use `npx tsc --noEmit`.

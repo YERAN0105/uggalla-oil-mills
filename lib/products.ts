@@ -153,6 +153,28 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
   };
 }
 
+/**
+ * Fetch published products by id, preserving the catalog select shape so they can
+ * be rendered with <ProductCard>. Order is not guaranteed; callers that need a
+ * specific order (e.g. wishlist by added_at) should re-sort by id.
+ */
+export async function getPublishedProductsByIds(
+  ids: string[]
+): Promise<ProductWithRelations[]> {
+  if (ids.length === 0) return [];
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .in("id", ids)
+    .eq("is_published", true)
+    .is("deleted_at", null)
+    .order("display_order", { ascending: true, referencedTable: "product_sizes" })
+    .order("display_order", { ascending: true, referencedTable: "product_images" });
+  if (error) return [];
+  return (data ?? []) as unknown as ProductWithRelations[];
+}
+
 export async function getProduct(slug: string): Promise<ProductWithRelations | null> {
   const supabase = await createClient();
   const { data, error } = await supabase

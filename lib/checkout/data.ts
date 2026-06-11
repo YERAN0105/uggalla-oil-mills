@@ -59,7 +59,7 @@ export async function getCheckoutUser(): Promise<{
     supabase.from("users").select("name, phone, loyalty_points").eq("id", authUser.id).single(),
     supabase
       .from("addresses")
-      .select("id, label, recipient, phone, line1, line2, city, postal_code, is_default")
+      .select("id, label, recipient, phone, line1, line2, city, postal_code, is_default, delivery_zone_id")
       .eq("user_id", authUser.id)
       .order("is_default", { ascending: false }),
   ]);

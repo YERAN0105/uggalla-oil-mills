@@ -1,10 +1,11 @@
 "use server";
 
 import { trackGuestOrder } from "@/lib/orders/data";
+import { signOrderToken } from "@/lib/orders/token";
 import type { OrderWithItems } from "@/types/checkout";
 
 export type TrackResult =
-  | { ok: true; order: OrderWithItems }
+  | { ok: true; order: OrderWithItems; token: string }
   | { ok: false; error: string };
 
 export async function trackOrderAction(orderNumber: string, contact: string): Promise<TrackResult> {
@@ -18,5 +19,7 @@ export async function trackOrderAction(orderNumber: string, contact: string): Pr
       error: "We couldn't find an order matching those details. Please check and try again.",
     };
   }
-  return { ok: true, order };
+  // The email/phone match proved access — mint a token so the guest can upload a
+  // bank-transfer receipt here (uploadBankReceipt authorizes via this token).
+  return { ok: true, order, token: signOrderToken(order.order_number) };
 }

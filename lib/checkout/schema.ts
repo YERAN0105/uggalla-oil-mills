@@ -19,6 +19,7 @@ export const addressSchema = z.object({
   line2: z.string().max(200).optional().default(""),
   city: z.string().min(2, "City is required").max(100),
   postal_code: z.string().max(20).optional().default(""),
+  label: z.string().max(50).optional().default(""),
 });
 
 export const createOrderSchema = z

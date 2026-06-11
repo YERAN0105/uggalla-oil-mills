@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Container } from "@/components/shared/Container";
 import { FadeIn } from "@/components/shared/FadeIn";
 import { GuestTrackForm } from "@/components/storefront/GuestTrackForm";
+import { getBankDetails } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Track Your Order" };
+export const dynamic = "force-dynamic";
 
 interface TrackPageProps {
   searchParams: Promise<{ order?: string }>;
@@ -11,6 +13,7 @@ interface TrackPageProps {
 
 export default async function TrackOrderPage({ searchParams }: TrackPageProps) {
   const { order } = await searchParams;
+  const bankDetails = await getBankDetails();
 
   return (
     <section className="bg-cream min-h-screen">
@@ -20,7 +23,7 @@ export default async function TrackOrderPage({ searchParams }: TrackPageProps) {
           <p className="text-muted-foreground mb-8">
             Enter your order number and the email or phone you used at checkout to see your order status.
           </p>
-          <GuestTrackForm initialOrder={order ?? ""} />
+          <GuestTrackForm initialOrder={order ?? ""} bankDetails={bankDetails} />
         </FadeIn>
       </Container>
     </section>
