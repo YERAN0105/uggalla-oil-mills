@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { FadeIn } from "@/components/shared/FadeIn";
-import { submitBulkRequest, type BulkRequestFormState } from "./actions";
+import { submitBulkRequest } from "./actions";
+import { BulkRequestSchema } from "./schema";
 import type { ProductWithRelations } from "@/types/supabase";
 import { cn } from "@/lib/utils";
 
@@ -17,19 +18,113 @@ interface BulkRequestFormProps {
   preselectedProductId?: string;
 }
 
-const initialState: BulkRequestFormState = { status: "idle" };
+type Values = {
+  name: string;
+  email: string;
+  product_id: string;
+  quantity: string;
+  unit: string;
+  fulfillment_type: "delivery" | "pickup";
+  address_line1: string;
+  address_city: string;
+  preferred_date: string;
+  notes: string;
+};
 
-function FieldError({ errors }: { errors?: string[] }) {
-  if (!errors?.length) return null;
-  return <p className="text-xs text-destructive mt-1">{errors[0]}</p>;
+const SELECT_CLASS =
+  "flex h-10 w-full rounded-md border border-input bg-cream px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-cream";
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="text-xs text-destructive mt-1">{message}</p>;
 }
 
 export function BulkRequestForm({ products, preselectedProductId }: BulkRequestFormProps) {
-  const [state, action, pending] = useActionState(submitBulkRequest, initialState);
+  const [values, setValues] = useState<Values>({
+    name: "",
+    email: "",
+    product_id: preselectedProductId ?? "",
+    quantity: "",
+    unit: "litres",
+    fulfillment_type: "delivery",
+    address_line1: "",
+    address_city: "",
+    preferred_date: "",
+    notes: "",
+  });
   const [phoneDigits, setPhoneDigits] = useState("");
-  const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">("delivery");
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [successId, setSuccessId] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  if (state.status === "success") {
+  // The phone field is entered as 9 digits and combined with +94 for validation.
+  const formValues = useMemo(
+    () => ({ ...values, phone: phoneDigits ? `+94${phoneDigits}` : "" }),
+    [values, phoneDigits]
+  );
+
+  // Live validation with the SAME schema the server uses.
+  const errors = useMemo(() => {
+    const result = BulkRequestSchema.safeParse(formValues);
+    return result.success
+      ? {}
+      : (result.error.flatten().fieldErrors as Record<string, string[]>);
+  }, [formValues]);
+
+  // "Reward early, punish late": a field's error is shown only after it has been
+  // blurred or a submit was attempted — then it clears live as the field becomes valid.
+  const showError = (field: string): string | undefined =>
+    touched.has(field) || submitted ? errors[field]?.[0] : undefined;
+
+  const setField = (field: keyof Values, value: string) =>
+    setValues((v) => ({ ...v, [field]: value }));
+
+  const markTouched = (field: string) =>
+    setTouched((t) => (t.has(field) ? t : new Set(t).add(field)));
+
+  const scrollToFirstError = () => {
+    requestAnimationFrame(() => {
+      const el = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.focus({ preventScroll: true });
+      }
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitted(true);
+    setServerError(null);
+
+    if (Object.keys(errors).length > 0) {
+      scrollToFirstError();
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await submitBulkRequest(formValues);
+      if (res.status === "success") {
+        setSuccessId(res.requestId);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        setServerError(res.message);
+        requestAnimationFrame(() =>
+          formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+        );
+      }
+    } catch {
+      setServerError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (successId) {
     return (
       <FadeIn className="text-center py-12 space-y-4">
         <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-green/10 mx-auto">
@@ -51,14 +146,13 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
     );
   }
 
-  const fieldErrors =
-    state.status === "error" ? (state.fieldErrors ?? {}) : {};
+  const isDelivery = values.fulfillment_type === "delivery";
 
   return (
-    <form action={action} className="space-y-6" noValidate>
-      {state.status === "error" && state.fieldErrors == null && (
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6" noValidate>
+      {serverError && (
         <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 text-sm text-destructive">
-          {state.message}
+          {serverError}
         </div>
       )}
 
@@ -73,13 +167,15 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
             <Label htmlFor="name">Full Name *</Label>
             <Input
               id="name"
-              name="name"
               placeholder="e.g. Nimal Perera"
-              required
-              aria-describedby={fieldErrors.name ? "name-error" : undefined}
-              className={cn(fieldErrors.name && "border-destructive")}
+              autoComplete="name"
+              value={values.name}
+              onChange={(e) => setField("name", e.target.value)}
+              onBlur={() => markTouched("name")}
+              aria-invalid={showError("name") ? true : undefined}
+              className={cn(showError("name") && "border-destructive")}
             />
-            <FieldError errors={fieldErrors.name} />
+            <FieldError message={showError("name")} />
           </div>
 
           <div className="space-y-1">
@@ -94,17 +190,18 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
                 inputMode="numeric"
                 placeholder="771234567"
                 maxLength={9}
+                autoComplete="tel-national"
                 value={phoneDigits}
                 onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, ""))}
-                autoComplete="tel-national"
-                aria-describedby={fieldErrors.phone ? "phone-error" : undefined}
-                className={cn("rounded-l-none", fieldErrors.phone && "border-destructive")}
+                onBlur={() => markTouched("phone")}
+                aria-invalid={showError("phone") ? true : undefined}
+                className={cn("rounded-l-none", showError("phone") && "border-destructive")}
               />
             </div>
-            {/* Hidden field carries the full +94 number to the server action */}
-            <input type="hidden" name="phone" value={phoneDigits ? `+94${phoneDigits}` : ""} />
-            <FieldError errors={fieldErrors.phone} />
-            <p className="text-xs text-muted-foreground">Enter 9 digits after +94, e.g. 771234567</p>
+            <FieldError message={showError("phone")} />
+            {!showError("phone") && (
+              <p className="text-xs text-muted-foreground">Enter 9 digits after +94, e.g. 771234567</p>
+            )}
           </div>
         </div>
 
@@ -112,14 +209,16 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
           <Label htmlFor="email">Email Address *</Label>
           <Input
             id="email"
-            name="email"
             type="email"
             placeholder="you@example.com"
-            required
-            aria-describedby={fieldErrors.email ? "email-error" : undefined}
-            className={cn(fieldErrors.email && "border-destructive")}
+            autoComplete="email"
+            value={values.email}
+            onChange={(e) => setField("email", e.target.value)}
+            onBlur={() => markTouched("email")}
+            aria-invalid={showError("email") ? true : undefined}
+            className={cn(showError("email") && "border-destructive")}
           />
-          <FieldError errors={fieldErrors.email} />
+          <FieldError message={showError("email")} />
         </div>
       </fieldset>
 
@@ -131,20 +230,23 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
 
         {products.length > 0 && (
           <div className="space-y-1">
-            <Label htmlFor="product_id">Product of Interest</Label>
+            <Label htmlFor="product_id">Product of Interest *</Label>
             <select
               id="product_id"
-              name="product_id"
-              defaultValue={preselectedProductId ?? ""}
-              className="flex h-10 w-full rounded-md border border-input bg-cream px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
+              value={values.product_id}
+              onChange={(e) => setField("product_id", e.target.value)}
+              onBlur={() => markTouched("product_id")}
+              aria-invalid={showError("product_id") ? true : undefined}
+              className={cn(SELECT_CLASS, showError("product_id") && "border-destructive")}
             >
-              <option value="">Select a product (optional)</option>
+              <option value="">Select a product</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
             </select>
+            <FieldError message={showError("product_id")} />
           </div>
         )}
 
@@ -153,24 +255,25 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
             <Label htmlFor="quantity">Quantity Needed *</Label>
             <Input
               id="quantity"
-              name="quantity"
               type="number"
               min={1}
               placeholder="e.g. 50"
-              required
-              aria-describedby={fieldErrors.quantity ? "quantity-error" : undefined}
-              className={cn(fieldErrors.quantity && "border-destructive")}
+              value={values.quantity}
+              onChange={(e) => setField("quantity", e.target.value)}
+              onBlur={() => markTouched("quantity")}
+              aria-invalid={showError("quantity") ? true : undefined}
+              className={cn(showError("quantity") && "border-destructive")}
             />
-            <FieldError errors={fieldErrors.quantity} />
+            <FieldError message={showError("quantity")} />
           </div>
 
           <div className="space-y-1">
             <Label htmlFor="unit">Unit *</Label>
             <select
               id="unit"
-              name="unit"
-              defaultValue="litres"
-              className="flex h-10 w-full rounded-md border border-input bg-cream px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-cream"
+              value={values.unit}
+              onChange={(e) => setField("unit", e.target.value)}
+              className={SELECT_CLASS}
             >
               <option value="litres">Litres</option>
               <option value="cans">Cans (20L each)</option>
@@ -200,8 +303,8 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
                 type="radio"
                 name="fulfillment_type"
                 value={opt.value}
-                checked={fulfillmentType === opt.value}
-                onChange={() => setFulfillmentType(opt.value as "delivery" | "pickup")}
+                checked={values.fulfillment_type === opt.value}
+                onChange={() => setField("fulfillment_type", opt.value)}
                 className="mt-0.5 accent-green"
               />
               <div>
@@ -212,22 +315,33 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
           ))}
         </div>
 
-        {fulfillmentType === "delivery" && (
+        {isDelivery && (
           <div className="space-y-3">
             <div className="space-y-1">
               <Label htmlFor="address_line1">Delivery Address *</Label>
               <Input
                 id="address_line1"
-                name="address_line1"
                 placeholder="Street address, area"
-                aria-describedby={fieldErrors.address_line1 ? "address-error" : undefined}
-                className={cn(fieldErrors.address_line1 && "border-destructive")}
+                value={values.address_line1}
+                onChange={(e) => setField("address_line1", e.target.value)}
+                onBlur={() => markTouched("address_line1")}
+                aria-invalid={showError("address_line1") ? true : undefined}
+                className={cn(showError("address_line1") && "border-destructive")}
               />
-              <FieldError errors={fieldErrors.address_line1} />
+              <FieldError message={showError("address_line1")} />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="address_city">City / Town</Label>
-              <Input id="address_city" name="address_city" placeholder="e.g. Colombo, Kandy" />
+              <Label htmlFor="address_city">City / Town *</Label>
+              <Input
+                id="address_city"
+                placeholder="e.g. Colombo, Kandy"
+                value={values.address_city}
+                onChange={(e) => setField("address_city", e.target.value)}
+                onBlur={() => markTouched("address_city")}
+                aria-invalid={showError("address_city") ? true : undefined}
+                className={cn(showError("address_city") && "border-destructive")}
+              />
+              <FieldError message={showError("address_city")} />
             </div>
           </div>
         )}
@@ -243,8 +357,9 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
           <Label htmlFor="preferred_date">Preferred Date (optional)</Label>
           <Input
             id="preferred_date"
-            name="preferred_date"
             type="date"
+            value={values.preferred_date}
+            onChange={(e) => setField("preferred_date", e.target.value)}
             min={new Date(Date.now() + 24 * 3600000).toISOString().split("T")[0]}
           />
         </div>
@@ -253,16 +368,17 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
           <Label htmlFor="notes">Notes / Special Requirements (optional)</Label>
           <Textarea
             id="notes"
-            name="notes"
             placeholder="Any special requirements, delivery instructions, or other details…"
             rows={4}
             maxLength={1000}
+            value={values.notes}
+            onChange={(e) => setField("notes", e.target.value)}
           />
         </div>
       </fieldset>
 
-      <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={pending}>
-        {pending ? (
+      <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={isSubmitting}>
+        {isSubmitting ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Submitting…

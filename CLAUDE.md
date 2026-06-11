@@ -19,7 +19,7 @@ npx tsc --noEmit     # Type-check only
 
 Run `supabase/seed.sql` (base reference data) and `supabase/seed-products.sql` in the Supabase SQL Editor after the migrations. Both are idempotent — safe to re-run.
 
-`seed-products.sql` inserts two brands, three categories (Bottles, Packets, Bulk), and 7 sample products with sizes and images. **Its brand/category UUIDs must match the ones already inserted by `seed.sql`** — `seed.sql` runs first and `ON CONFLICT (slug) DO UPDATE` keeps the original UUID, so a mismatch produces a foreign-key error on the product inserts.
+`seed-products.sql` inserts two brands, three categories (Bottles, Packets, Bulk), and 9 sample products — 5 retail (Royal Coco, with sizes) and 4 bulk (Uggalla Oil Mills, one per oil type, no sizes). **Its brand/category UUIDs must match the ones already inserted by `seed.sql`** — `seed.sql` runs first and `ON CONFLICT (slug) DO UPDATE` keeps the original UUID, so a mismatch produces a foreign-key error on the product inserts.
 
 There are no automated tests yet (added in a later phase).
 
@@ -60,11 +60,20 @@ The `public.users` table extends `auth.users` via a trigger (`handle_new_user`).
 
 ## Product Price Model
 
-A product's displayed price ("from Rs. X") is the **minimum of its `product_sizes.price`**, not a single column. This has consequences:
+A product's displayed price ("from Rs. X") is the **minimum of its `product_sizes.price`**. Retail products (bottles, packets) have several sizes; **bulk products have no `product_sizes` rows at all** — their price lives in `products.base_price`, and `getMinPrice()` falls back to it. That split drives everything price-related:
 
-- **Display & sorting:** use `getMinPrice()` / sort by `base_price` (which the trigger keeps equal to the min size price).
-- **Price-range filtering:** query `product_sizes.price` and collect the parent product IDs — do *not* filter on `products.base_price`. See `getProducts()` in `lib/products.ts`; it resolves matching size/price/brand/category rows into ID lists first, then filters the product query by those IDs.
+- **Display & sorting:** use `getMinPrice()`; sort by `base_price` (the trigger keeps it equal to the min size price for sized products, and it's the indicative price for bulk).
+- **Price-range filtering:** `getProducts()` in `lib/products.ts` unions **two** ID sets — products with *any size in range* (retail) and *sizeless products whose `base_price` is in range* (bulk). This is how bulk products participate in price filtering despite having no sizes. The union is safe for retail because the migration-004 trigger guarantees `base_price = MIN(size price)`, so any retail product matched via `base_price` is always already matched via a size. `getProducts()` resolves all size/price/brand/category matches into ID lists first, then filters the product query by those IDs.
 - **Client/server split:** `lib/products.ts` is server-only (it imports `lib/supabase/server.ts` → `next/headers`). Pure helpers that client components need (`getMinPrice`, `getPrimaryImage`) live in `lib/product-utils.ts`. Client Components must import from `lib/product-utils`, never `lib/products`.
+
+## Catalog Routing & Filters
+
+A category can be viewed two ways, and they are intentionally different:
+
+- **`/shop?category=<slug>`** — a *filter* on the main shop page (multi-select, additive with other filters). The homepage cards link to the dedicated pages, but the FilterSidebar checkboxes drive this param.
+- **`/shop/category/<slug>`** — a *dedicated* landing page with a hero banner and brand eyebrow. It scopes products by the **route slug** and deliberately **ignores any `?category=` param** — don't "fix" it to read that param.
+
+`FilterSidebar` (and `MobileFilterDrawer`) take `hideCategories` / `hideBrands` / `hideSizes` props so a page can drop filter sections that don't apply. Category pages hide Category and Brand always (the page is already scoped to one category, which maps to one brand), and hide Size on the bulk category (bulk products have no sizes). The main `/shop` shows all four.
 
 ## Build Phases
 
@@ -86,6 +95,25 @@ Phases 1 and 2 are complete. Phases 3–6 are pending. Do not build features fro
 - `components/ui/` — base primitives (Button, Input, Card, etc.)
 - `components/shared/` — layout helpers used across both storefront and admin (BrandLogo, Container, FadeIn, DropletSVG)
 - `components/storefront/` — storefront-specific (Header, Footer, WhatsAppButton)
+- `stores/` — Zustand client-side stores. Currently only `wishlistStore.ts`, persisted to `localStorage` as `uggalla-wishlist`.
 - The `FadeIn` component (`components/shared/FadeIn.tsx`) wraps Framer Motion and respects `prefers-reduced-motion` globally via CSS in `globals.css`.
 - The Google OAuth button is conditionally rendered based on `isGoogleAuthEnabled` — the login page always works with email/password even when Google is not configured.
 - `globals.css` applies a global brand-green `:focus-visible` ring to **every** focusable element. To suppress it on a specific element (e.g. a text input styled as a borderless pill), add `focus-visible:ring-0 focus-visible:ring-offset-0` — don't remove the global rule.
+
+## Zustand + localStorage Hydration
+
+Any component that reads from a Zustand `persist` store must use a mounted guard, or it will produce a React hydration mismatch (the server renders the default empty state; the client rehydrates from `localStorage` with a different value):
+
+```tsx
+const [mounted, setMounted] = useState(false);
+useEffect(() => setMounted(true), []);
+const saved = mounted ? isInWishlist(productId) : false;
+```
+
+See `components/storefront/WishlistButton.tsx` as the reference. Apply this pattern to every component that derives UI state from a persisted store.
+
+## Form Validation Pattern
+
+For any non-trivial form, co-locate a `schema.ts` next to the form and server action files. Export a Zod schema and the inferred type from it; import both in the client form (for live "reward early, punish late" validation) and the server action (as the final authority before touching the DB). See `app/(storefront)/bulk-request/schema.ts` as the reference implementation.
+
+The client form should be fully controlled (`useState` per field), track a `touched: Set<string>` for blurred fields and a `submitted: boolean` flag, and derive errors live via `useMemo(() => Schema.safeParse(...))`. Error visibility rule: `(touched.has(field) || submitted) ? errors[field]?.[0] : undefined`.

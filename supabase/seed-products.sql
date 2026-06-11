@@ -365,7 +365,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 
--- 6. Uggalla Oil Mills Loose Coconut Oil (Bulk)
+-- 6. Coconut Oil (Bulk)
 INSERT INTO public.products (
   id, slug, brand_id, category_id, name, short_description, description,
   key_facts, base_price, purchase_type,
@@ -376,12 +376,12 @@ INSERT INTO public.products (
 )
 VALUES (
   '660e8400-e29b-41d4-a716-446655440006',
-  'uggalla-loose-coconut-oil-bulk',
+  'coconut-oil-bulk',
   '550e8400-e29b-41d4-a716-446655440002',
   'b1b2c3d4-0001-0001-0001-000000000003',
-  'Uggalla Loose Coconut Oil (Bulk)',
-  'Wholesale loose coconut oil from Uggalla Oil Mills for restaurants, hotels, bakeries, and exporters. Indicative price Rs. 580 / litre — request a quote for your volume.',
-  '<p>Uggalla Oil Mills supplies bulk loose coconut oil directly from our Padukka mill to restaurants, hotels, bakeries, food manufacturers, and exporters across Sri Lanka.</p><p>Our bulk oil is available in quantities from 10 litres upward, dispatched in sealed 20L cans or custom food-grade containers. The same premium cold-pressed quality as our retail range, at commercial pricing.</p><p>Request a quote below — we typically respond within 24 hours with a tailored price based on your volume and delivery location.</p>',
+  'Coconut Oil (Bulk)',
+  'Wholesale coconut oil from Uggalla Oil Mills for restaurants, hotels, bakeries, and exporters. Indicative price Rs. 580 / litre — request a quote for your volume and packaging.',
+  '<p>Uggalla Oil Mills supplies bulk coconut oil directly from our Padukka mill to restaurants, hotels, bakeries, food manufacturers, and exporters across Sri Lanka.</p><p>Available from 10 litres upward — dispatched loose, in sealed 20L cans, or in custom food-grade containers. Tell us the volume and packaging you need when you request a quote. The same premium quality as our retail range, at commercial pricing.</p><p>We typically respond within 24 hours with a tailored price based on your volume and delivery location.</p>',
   '[
     {"label": "Minimum Order", "value": "10 litres"},
     {"label": "Extraction", "value": "Cold-pressed"},
@@ -404,19 +404,19 @@ ON CONFLICT (slug) DO UPDATE SET
   base_price = EXCLUDED.base_price,
   updated_at = now();
 
--- Images for Bulk Loose Oil
+-- Images for Coconut Oil (Bulk)
 INSERT INTO public.product_images (id, product_id, url, alt_text, display_order, is_primary)
 VALUES
   ('880e8400-e29b-41d4-a716-446655440011', '660e8400-e29b-41d4-a716-446655440006',
    'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
-   'Bulk coconut oil — 20L food-grade can', 1, true),
+   'Bulk coconut oil — food-grade container', 1, true),
   ('880e8400-e29b-41d4-a716-446655440012', '660e8400-e29b-41d4-a716-446655440006',
    'https://images.unsplash.com/photo-1571943957988-b22f4c7b4f3c?w=800&q=80',
    'Pure coconut oil pouring', 2, false)
 ON CONFLICT (id) DO NOTHING;
 
 
--- 7. Uggalla Oil Mills 20L Can (Wholesale)
+-- 7. Virgin Coconut Oil (Bulk)
 INSERT INTO public.products (
   id, slug, brand_id, category_id, name, short_description, description,
   key_facts, base_price, purchase_type,
@@ -426,28 +426,28 @@ INSERT INTO public.products (
   meta_title, meta_description
 )
 VALUES (
-  '660e8400-e29b-41d4-a716-446655440007',
-  'uggalla-20l-can-wholesale',
+  '660e8400-e29b-41d4-a716-446655440008',
+  'virgin-coconut-oil-bulk',
   '550e8400-e29b-41d4-a716-446655440002',
   'b1b2c3d4-0001-0001-0001-000000000003',
-  'Uggalla Oil Mills Coconut Oil — 20L Can (Wholesale)',
-  'Factory-sealed 20-litre food-grade cans for large commercial buyers. Request a quote for multi-can orders.',
-  '<p>Our 20-litre factory-sealed cans are designed for large commercial and institutional buyers — supermarkets, food manufacturers, export agents, and institutional kitchens.</p><p>Each can is filled fresh at our Padukka mill, nitrogen-flushed to extend shelf life, and sealed for transport. We offer multi-can pricing with island-wide delivery.</p><p>Submit a quote request below with your required quantity and we will send you a commercial offer within 24 hours.</p>',
+  'Virgin Coconut Oil (Bulk)',
+  'Wholesale cold-pressed virgin coconut oil for health brands, cafés, and exporters. Indicative price Rs. 980 / litre — request a quote for your volume and packaging.',
+  '<p>Our extra-virgin coconut oil is cold-extracted from fresh coconut milk with no heat treatment, keeping its light natural aroma and high medium-chain fatty acid content.</p><p>Supplied in bulk to wellness brands, premium cafés, cosmetic manufacturers, and exporters. Available from 10 litres upward in sealed cans or custom food-grade containers — tell us your volume and packaging when you request a quote.</p><p>We typically respond within 24 hours with a tailored commercial price.</p>',
   '[
-    {"label": "Volume", "value": "20 litres per can"},
-    {"label": "Extraction", "value": "Cold-pressed"},
-    {"label": "Type", "value": "Refined Pure Coconut Oil"},
-    {"label": "Shelf Life", "value": "24 months (sealed)"},
-    {"label": "Minimum Order", "value": "1 can (20L)"},
-    {"label": "Lead Time", "value": "2–5 business days"}
+    {"label": "Minimum Order", "value": "10 litres"},
+    {"label": "Extraction", "value": "Cold-pressed, unrefined"},
+    {"label": "Type", "value": "Extra-Virgin Coconut Oil"},
+    {"label": "Indicative Price", "value": "Rs. 980 / litre (volume discounts apply)"},
+    {"label": "Packaging", "value": "Sealed cans or custom"},
+    {"label": "Lead Time", "value": "2–3 business days"}
   ]',
-  11500.00,
+  980.00,
   'bulk_quote',
   false, true, 500,
-  true, false, false,
+  true, true, false,
   false, 0, 0,
-  'Uggalla Oil Mills 20L Coconut Oil Can — Wholesale',
-  'Wholesale 20-litre coconut oil cans from Uggalla Oil Mills. Factory-sealed, nitrogen-flushed for extended shelf life. Request a commercial quote.'
+  'Virgin Coconut Oil — Bulk & Wholesale | Uggalla Oil Mills',
+  'Wholesale cold-pressed virgin coconut oil from Uggalla Oil Mills, Padukka. Premium quality for health brands, cafés and exporters. Request a quote.'
 )
 ON CONFLICT (slug) DO UPDATE SET
   name = EXCLUDED.name,
@@ -455,13 +455,115 @@ ON CONFLICT (slug) DO UPDATE SET
   base_price = EXCLUDED.base_price,
   updated_at = now();
 
--- Images for 20L Can
+-- Images for Virgin Coconut Oil (Bulk)
 INSERT INTO public.product_images (id, product_id, url, alt_text, display_order, is_primary)
 VALUES
-  ('880e8400-e29b-41d4-a716-446655440013', '660e8400-e29b-41d4-a716-446655440007',
-   'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
-   'Uggalla Oil Mills 20L coconut oil can', 1, true),
-  ('880e8400-e29b-41d4-a716-446655440014', '660e8400-e29b-41d4-a716-446655440007',
+  ('880e8400-e29b-41d4-a716-446655440015', '660e8400-e29b-41d4-a716-446655440008',
    'https://images.unsplash.com/photo-1596392927852-2a18c336fb44?w=800&q=80',
-   'Bulk coconut oil at Uggalla mill', 2, false)
+   'Virgin coconut oil — bulk supply', 1, true),
+  ('880e8400-e29b-41d4-a716-446655440016', '660e8400-e29b-41d4-a716-446655440008',
+   'https://images.unsplash.com/photo-1618354691438-25bc04584c23?w=800&q=80',
+   'Cold-pressed virgin coconut oil', 2, false)
+ON CONFLICT (id) DO NOTHING;
+
+
+-- 8. Sesame (Gingelly) Oil (Bulk)
+INSERT INTO public.products (
+  id, slug, brand_id, category_id, name, short_description, description,
+  key_facts, base_price, purchase_type,
+  allows_subscription, allows_note, note_max_chars,
+  is_published, is_featured, is_bestseller,
+  stock_tracked, stock_quantity, low_stock_threshold,
+  meta_title, meta_description
+)
+VALUES (
+  '660e8400-e29b-41d4-a716-446655440009',
+  'sesame-gingelly-oil-bulk',
+  '550e8400-e29b-41d4-a716-446655440002',
+  'b1b2c3d4-0001-0001-0001-000000000003',
+  'Sesame (Gingelly) Oil (Bulk)',
+  'Wholesale pure sesame (gingelly) oil for kitchens, ayurvedic centres, and food manufacturers. Indicative price Rs. 1,350 / litre — request a quote.',
+  '<p>Traditional gingelly (thala thel) oil pressed from quality sesame seeds — a Sri Lankan kitchen and ayurvedic staple with a rich, nutty aroma.</p><p>Supplied in bulk to restaurants, ayurvedic practitioners, spice exporters, and food manufacturers. Available from 5 litres upward in sealed cans or custom food-grade containers; tell us your volume and packaging when you request a quote.</p><p>We typically respond within 24 hours with a tailored commercial price.</p>',
+  '[
+    {"label": "Minimum Order", "value": "5 litres"},
+    {"label": "Extraction", "value": "Cold-pressed"},
+    {"label": "Type", "value": "Pure Sesame (Gingelly) Oil"},
+    {"label": "Indicative Price", "value": "Rs. 1,350 / litre (volume discounts apply)"},
+    {"label": "Packaging", "value": "Sealed cans or custom"},
+    {"label": "Lead Time", "value": "3–5 business days"}
+  ]',
+  1350.00,
+  'bulk_quote',
+  false, true, 500,
+  true, false, false,
+  false, 0, 0,
+  'Sesame (Gingelly) Oil — Bulk & Wholesale | Uggalla Oil Mills',
+  'Wholesale pure sesame (gingelly) oil from Uggalla Oil Mills, Padukka. For kitchens, ayurvedic centres and food manufacturers. Request a quote.'
+)
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  short_description = EXCLUDED.short_description,
+  base_price = EXCLUDED.base_price,
+  updated_at = now();
+
+-- Images for Sesame (Gingelly) Oil (Bulk)
+INSERT INTO public.product_images (id, product_id, url, alt_text, display_order, is_primary)
+VALUES
+  ('880e8400-e29b-41d4-a716-446655440017', '660e8400-e29b-41d4-a716-446655440009',
+   'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=800&q=80',
+   'Sesame gingelly oil — bulk supply', 1, true),
+  ('880e8400-e29b-41d4-a716-446655440018', '660e8400-e29b-41d4-a716-446655440009',
+   'https://images.unsplash.com/photo-1571943957988-b22f4c7b4f3c?w=800&q=80',
+   'Pure sesame oil pouring', 2, false)
+ON CONFLICT (id) DO NOTHING;
+
+
+-- 9. Coconut Hair Oil (Bulk)
+INSERT INTO public.products (
+  id, slug, brand_id, category_id, name, short_description, description,
+  key_facts, base_price, purchase_type,
+  allows_subscription, allows_note, note_max_chars,
+  is_published, is_featured, is_bestseller,
+  stock_tracked, stock_quantity, low_stock_threshold,
+  meta_title, meta_description
+)
+VALUES (
+  '660e8400-e29b-41d4-a716-446655440010',
+  'coconut-hair-oil-bulk',
+  '550e8400-e29b-41d4-a716-446655440002',
+  'b1b2c3d4-0001-0001-0001-000000000003',
+  'Coconut Hair Oil (Bulk)',
+  'Wholesale coconut hair oil infused with curry leaf & hibiscus for salons, spas, and ayurvedic distributors. Indicative price Rs. 700 / litre — request a quote.',
+  '<p>The bulk version of our traditional coconut hair oil — pure cold-pressed coconut oil infused with curry leaf and hibiscus, a recipe passed down for generations at our Padukka mill.</p><p>Supplied to salons, spas, ayurvedic centres, and private-label distributors. Available from 10 litres upward in sealed cans or custom containers; tell us your volume and packaging when you request a quote.</p><p>We typically respond within 24 hours with a tailored commercial price.</p>',
+  '[
+    {"label": "Minimum Order", "value": "10 litres"},
+    {"label": "Base Oil", "value": "Cold-pressed coconut oil"},
+    {"label": "Enriched With", "value": "Curry leaf, hibiscus"},
+    {"label": "Indicative Price", "value": "Rs. 700 / litre (volume discounts apply)"},
+    {"label": "Packaging", "value": "Sealed cans or custom"},
+    {"label": "Lead Time", "value": "3–5 business days"}
+  ]',
+  700.00,
+  'bulk_quote',
+  false, true, 500,
+  true, false, false,
+  false, 0, 0,
+  'Coconut Hair Oil — Bulk & Wholesale | Uggalla Oil Mills',
+  'Wholesale coconut hair oil infused with curry leaf and hibiscus from Uggalla Oil Mills. For salons, spas and ayurvedic distributors. Request a quote.'
+)
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  short_description = EXCLUDED.short_description,
+  base_price = EXCLUDED.base_price,
+  updated_at = now();
+
+-- Images for Coconut Hair Oil (Bulk)
+INSERT INTO public.product_images (id, product_id, url, alt_text, display_order, is_primary)
+VALUES
+  ('880e8400-e29b-41d4-a716-446655440019', '660e8400-e29b-41d4-a716-446655440010',
+   'https://images.unsplash.com/photo-1526947425960-945c6e72858f?w=800&q=80',
+   'Coconut hair oil — bulk supply', 1, true),
+  ('880e8400-e29b-41d4-a716-446655440020', '660e8400-e29b-41d4-a716-446655440010',
+   'https://images.unsplash.com/photo-1515023115689-589c33041d3c?w=800&q=80',
+   'Coconuts — source for hair oil', 2, false)
 ON CONFLICT (id) DO NOTHING;
