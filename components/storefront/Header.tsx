@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
-import { Menu, X, Heart, ShoppingCart, User, ChevronDown } from "lucide-react";
+import { Menu, X, Heart, User, ChevronDown } from "lucide-react";
 import { BrandLogo } from "@/components/shared/BrandLogo";
 import { Container } from "@/components/shared/Container";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/storefront/SearchBar";
+import { CartButton } from "@/components/storefront/CartButton";
 import { useWishlistStore } from "@/stores/wishlistStore";
 import { cn } from "@/lib/utils";
 import { brand } from "@/lib/brand";
@@ -172,15 +173,8 @@ export function Header() {
                 </Link>
               </Button>
 
-              {/* Cart — wired in Phase 3 */}
-              <Button variant="ghost" size="icon" aria-label="Cart (0 items)" className="relative" asChild>
-                <Link href="/cart">
-                  <ShoppingCart className="h-5 w-5" />
-                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-gold text-green-deep text-[10px] font-bold flex items-center justify-center leading-none">
-                    0
-                  </span>
-                </Link>
-              </Button>
+              {/* Cart drawer trigger */}
+              <CartButton />
 
               {/* Mobile hamburger */}
               <Button
