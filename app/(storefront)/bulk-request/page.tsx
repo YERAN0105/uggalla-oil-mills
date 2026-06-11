@@ -59,7 +59,7 @@ export default async function BulkRequestPage({ searchParams }: BulkRequestPageP
 
           {/* Sidebar */}
           <aside className="space-y-6">
-            <FadeIn>
+            <FadeIn className="space-y-6">
               <div className="bg-white rounded-2xl border border-sand p-6">
                 <h3 className="font-display text-lg text-green-deep mb-4">
                   Why Buy Bulk from Us?

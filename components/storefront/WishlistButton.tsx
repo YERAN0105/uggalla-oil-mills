@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
 import { m } from "framer-motion";
 import { toast } from "sonner";
@@ -19,8 +20,10 @@ export function WishlistButton({
   className,
   size = "md",
 }: WishlistButtonProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const { toggle, isInWishlist } = useWishlistStore();
-  const saved = isInWishlist(productId);
+  const saved = mounted ? isInWishlist(productId) : false;
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();

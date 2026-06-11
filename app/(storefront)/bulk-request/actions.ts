@@ -1,36 +1,17 @@
 "use server";
 
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-
-const phoneRegex = /^(\+94|0)[0-9]{9}$/;
-
-const BulkRequestSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(100),
-  email: z.string().email("Please enter a valid email address"),
-  phone: z.string().regex(phoneRegex, "Enter a valid Sri Lankan phone number (e.g. +94771234567)"),
-  product_id: z.string().uuid().optional().or(z.literal("")),
-  quantity: z.coerce.number().positive("Quantity must be greater than 0").max(100000),
-  unit: z.enum(["litres", "cans", "kg", "other"]),
-  fulfillment_type: z.enum(["delivery", "pickup"]),
-  address_line1: z.string().optional(),
-  address_city: z.string().optional(),
-  preferred_date: z.string().optional(),
-  notes: z.string().max(1000).optional(),
-});
+import { BulkRequestSchema } from "./schema";
 
 export type BulkRequestFormState =
-  | { status: "idle" }
   | { status: "success"; requestId: string }
   | { status: "error"; message: string; fieldErrors?: Record<string, string[]> };
 
-export async function submitBulkRequest(
-  _prev: BulkRequestFormState,
-  formData: FormData
-): Promise<BulkRequestFormState> {
-  const raw = Object.fromEntries(formData.entries());
-  const parsed = BulkRequestSchema.safeParse(raw);
+// Final authority — the client validates with the same schema for UX, but never
+// trust that alone. Re-validate everything here before touching the database.
+export async function submitBulkRequest(input: unknown): Promise<BulkRequestFormState> {
+  const parsed = BulkRequestSchema.safeParse(input);
 
   if (!parsed.success) {
     return {
@@ -41,15 +22,6 @@ export async function submitBulkRequest(
   }
 
   const data = parsed.data;
-
-  // Delivery requires address
-  if (data.fulfillment_type === "delivery" && !data.address_line1) {
-    return {
-      status: "error",
-      message: "Please enter a delivery address.",
-      fieldErrors: { address_line1: ["Delivery address is required"] },
-    };
-  }
 
   try {
     // Get current user if logged in (optional)

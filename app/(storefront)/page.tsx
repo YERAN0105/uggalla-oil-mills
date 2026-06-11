@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { FadeIn } from "@/components/shared/FadeIn";
 import { DropletSVG } from "@/components/shared/DropletSVG";
 import { NewsletterForm } from "@/components/storefront/NewsletterForm";
+import { ProductCard } from "@/components/storefront/ProductCard";
+import { getProducts } from "@/lib/products";
 
 const categories = [
   {
@@ -109,7 +111,12 @@ const testimonials = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  let { products: featuredProducts } = await getProducts({ featured: true, pageSize: 4 });
+  if (featuredProducts.length === 0) {
+    const fallback = await getProducts({ pageSize: 4 });
+    featuredProducts = fallback.products;
+  }
   return (
     <>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
@@ -303,19 +310,10 @@ export default function HomePage() {
             </div>
           </FadeIn>
 
-          {/* Placeholder cards — replaced in Phase 2 */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <FadeIn key={i} delay={i * 0.08}>
-                <div className="rounded-xl overflow-hidden border border-sand shadow-sm bg-white">
-                  <div className="aspect-square skeleton" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-3 rounded skeleton w-1/3" />
-                    <div className="h-5 rounded skeleton w-3/4" />
-                    <div className="h-4 rounded skeleton w-1/2" />
-                    <div className="h-9 rounded-lg skeleton w-full" />
-                  </div>
-                </div>
+            {featuredProducts.map((product, i) => (
+              <FadeIn key={product.id} delay={i * 0.08}>
+                <ProductCard product={product} />
               </FadeIn>
             ))}
           </div>
