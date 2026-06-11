@@ -1,0 +1,162 @@
+import type { Metadata } from "next";
+import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { PrintInvoiceButton } from "@/components/account/PrintInvoiceButton";
+import { getAccountUser, getAccountOrderDetail } from "@/lib/account/data";
+import { getShopInfo } from "@/lib/settings";
+import { formatCurrency, brand } from "@/lib/brand";
+import { formatShortDate } from "@/lib/date";
+import { PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL, ORDER_STATUS_LABEL } from "@/lib/orders/status";
+
+export const metadata: Metadata = { title: "Invoice" };
+
+// Print isolation: when printing, hide all page chrome (header, footer, account
+// sidebar) and show only the invoice document.
+const PRINT_CSS = `
+@media print {
+  body * { visibility: hidden !important; }
+  #invoice-print-area, #invoice-print-area * { visibility: visible !important; }
+  #invoice-print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+  @page { margin: 16mm; }
+}
+`;
+
+interface PageProps {
+  params: Promise<{ orderNumber: string }>;
+}
+
+export default async function InvoicePage({ params }: PageProps) {
+  const user = await getAccountUser();
+  const { orderNumber } = await params;
+  if (!user) redirect(`/login?redirect=/account/orders/${orderNumber}/invoice`);
+
+  const order = await getAccountOrderDetail(user.id, orderNumber);
+  if (!order) notFound();
+
+  const shop = await getShopInfo();
+  const isDelivery = order.fulfillment_type === "delivery";
+  const addr = order.address_snapshot;
+
+  return (
+    <div>
+      <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <Link
+          href={`/account/orders/${order.order_number}`}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-green"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to order
+        </Link>
+        <PrintInvoiceButton />
+      </div>
+
+      {/* Invoice document */}
+      <div
+        id="invoice-print-area"
+        className="rounded-2xl border border-sand bg-white p-6 text-green-deep md:p-10"
+      >
+        {/* Header */}
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-sand pb-6">
+          <div>
+            <p className="font-display text-2xl font-semibold text-green">{shop.name ?? brand.name}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{shop.address}</p>
+            <p className="text-sm text-muted-foreground">{shop.phone}</p>
+            <p className="text-sm text-muted-foreground">{shop.email}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-display text-xl font-semibold">Invoice</p>
+            <p className="mt-1 text-sm text-muted-foreground">{order.order_number}</p>
+            <p className="text-sm text-muted-foreground">{formatShortDate(order.created_at)}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {ORDER_STATUS_LABEL[order.status] ?? order.status}
+            </p>
+          </div>
+        </div>
+
+        {/* Bill to */}
+        <div className="grid gap-6 py-6 sm:grid-cols-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Billed to</p>
+            <p className="mt-1 font-medium">{addr?.recipient ?? user.name ?? user.email}</p>
+            {addr?.phone && <p className="text-sm text-muted-foreground">{addr.phone}</p>}
+            {isDelivery && addr && (
+              <p className="text-sm text-muted-foreground">
+                {[addr.line1, addr.line2, addr.city, addr.postal_code].filter(Boolean).join(", ")}
+              </p>
+            )}
+            {!isDelivery && <p className="text-sm text-muted-foreground">Pickup order</p>}
+          </div>
+          <div className="sm:text-right">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment</p>
+            <p className="mt-1 text-sm">{PAYMENT_METHOD_LABEL[order.payment_method] ?? order.payment_method}</p>
+            <p className="text-sm text-muted-foreground">
+              {PAYMENT_STATUS_LABEL[order.payment_status] ?? order.payment_status}
+            </p>
+            {order.delivery_date && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {isDelivery ? "Delivery" : "Pickup"}: {formatShortDate(order.delivery_date)}
+                {order.time_slot?.label ? ` · ${order.time_slot.label}` : ""}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Items */}
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-sand text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <th className="py-2">Item</th>
+              <th className="py-2 text-center">Qty</th>
+              <th className="py-2 text-right">Unit price</th>
+              <th className="py-2 text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {order.order_items.map((item) => (
+              <tr key={item.id} className="border-b border-sand/60">
+                <td className="py-2.5 pr-2">
+                  <p className="font-medium">{item.product_snapshot.name}</p>
+                  <p className="text-xs text-muted-foreground">{item.options.size?.label}</p>
+                </td>
+                <td className="py-2.5 text-center">{item.quantity}</td>
+                <td className="py-2.5 text-right">{formatCurrency(item.unit_price)}</td>
+                <td className="py-2.5 text-right">{formatCurrency(item.line_total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Totals */}
+        <div className="mt-4 ml-auto max-w-xs space-y-1.5 text-sm">
+          <Row label="Subtotal" value={formatCurrency(order.subtotal)} />
+          {order.discount_amount > 0 && <Row label="Discount" value={`−${formatCurrency(order.discount_amount)}`} />}
+          {order.loyalty_discount > 0 && (
+            <Row label={`Loyalty (${order.loyalty_points_used} pts)`} value={`−${formatCurrency(order.loyalty_discount)}`} />
+          )}
+          {isDelivery && <Row label="Delivery" value={formatCurrency(order.delivery_fee)} />}
+          {order.tax_amount > 0 && <Row label="Tax" value={formatCurrency(order.tax_amount)} />}
+          <div className="flex justify-between border-t border-sand pt-2 text-base font-semibold">
+            <span>Total</span>
+            <span>{formatCurrency(order.total)}</span>
+          </div>
+        </div>
+
+        <p className="mt-8 border-t border-sand pt-4 text-center text-xs text-muted-foreground">
+          Thank you for choosing {shop.name ?? brand.name}. {brand.tagline}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  );
+}

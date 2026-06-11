@@ -29,6 +29,25 @@ export async function applyCouponAction(
   return evaluateCoupon(code, lines, user?.id ?? null, 0);
 }
 
+// ─── Email account check (soft nudge for guests) ─────────────────────────────
+
+/**
+ * Returns whether an account already exists for this email, so checkout can
+ * gently suggest logging in. Non-blocking; uses a security-definer DB function
+ * (migration 006) via the service-role client so auth.users is never exposed.
+ */
+export async function checkEmailHasAccount(email: string): Promise<boolean> {
+  const trimmed = email.trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmed)) return false;
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("email_has_account", { p_email: trimmed });
+  if (error) {
+    console.error("[checkEmailHasAccount] rpc error:", error);
+    return false;
+  }
+  return data === true;
+}
+
 // ─── Slot availability (used by checkout to disable full slots) ───────────────
 
 export async function getSlotAvailabilityAction(date: string): Promise<Record<string, number>> {
@@ -243,17 +262,18 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
         city: data.address.city,
         postal_code: data.address.postal_code || null,
       };
-      // Save for logged-in customers who opted in.
+      // Save for logged-in customers who opted in (incl. the chosen zone).
       if (data.saveAddress && userId) {
         await admin.from("addresses").insert({
           user_id: userId,
-          label: "Home",
+          label: data.address.label?.trim() || "Home",
           recipient: data.address.recipient,
           phone: data.address.phone,
           line1: data.address.line1,
           line2: data.address.line2 || null,
           city: data.address.city,
           postal_code: data.address.postal_code || null,
+          delivery_zone_id: deliveryZoneId,
         });
       }
     } else {

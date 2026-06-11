@@ -40,7 +40,7 @@ There are no automated tests yet (added in a later phase).
 - `lib/supabase/server.ts` — server (Server Components, Route Handlers, Server Actions)
 - `lib/supabase/admin.ts` — service-role, bypasses RLS — server-only, never import in client code
 
-**Middleware** (`middleware.ts`) refreshes sessions on every request and redirects unauthenticated users away from `/admin/*`. It also checks `public.users.role = 'admin'` before allowing access.
+**Middleware** (`middleware.ts`) refreshes sessions on every request, redirects unauthenticated users away from `/account/*`, and redirects them away from `/admin/*` (additionally checking `public.users.role = 'admin'`). Account pages also guard server-side via `getAccountUser()` (which returns `null` for blocked/soft-deleted users) — defense in depth.
 
 **Brand config** lives entirely in `lib/brand.ts` (name, tagline, contact, currency, timezone) and `app/globals.css` (CSS variables for the color palette). The Tailwind theme in `tailwind.config.ts` maps those CSS variables. Change brand details in one place — nowhere else.
 
@@ -52,7 +52,7 @@ There are no automated tests yet (added in a later phase).
 
 ## Database
 
-Migrations in `supabase/migrations/` must be run in order (001 → 004) via the Supabase SQL Editor or CLI. RLS is enabled on every table. The helper function `public.is_admin()` is used throughout RLS policies — do not bypass it.
+Migrations in `supabase/migrations/` must be run in order (001 → 007) via the Supabase SQL Editor or CLI. RLS is enabled on every table. The helper function `public.is_admin()` is used throughout RLS policies — do not bypass it. (Migration 007 adds `users.deleted_at` for soft-deleting accounts, a unique index enforcing one review per `order_item_id`, and a customer "delete own review" policy.)
 
 The `public.users` table extends `auth.users` via a trigger (`handle_new_user`). Always upsert into `public.users` by `id`; never insert a row that doesn't have a matching `auth.users` entry.
 
@@ -93,18 +93,36 @@ A category can be viewed two ways, and they are intentionally different:
 
 **Slot capacity** is a count of non-cancelled orders for a `(date, slot)` pair (`getSlotAvailability` for display, re-checked in `createOrder`). A small race window is accepted at this scale.
 
+## Customer Account (Phase 4)
+
+The logged-in account lives under `app/(storefront)/account/` with a server-guarded `layout.tsx` + sticky `AccountNav`. A single `account/loading.tsx` and `account/error.tsx` act as the Suspense/error boundary for every sub-page.
+
+**Account reads use the service-role admin client filtered by `user_id`** (`lib/account/data.ts`), the same pattern as order writes. This is deliberate: RLS-bound joins would drop rows whose referenced product has since been unpublished (e.g. a subscription or wishlist item for a now-hidden product), and the account needs to surface those as "no longer available". Authorization is the `.eq("user_id", userId)` filter. Read models live in `types/account.ts`.
+
+**Loyalty earn/reverse logic is in `lib/loyalty/engine.ts` — a plain server module, NOT a `"use server"` file**, so it is never exposed as a client-callable action. `earnLoyaltyForOrder` is idempotent (guarded by an existing `earn` transaction) and is wired to fire when an order becomes `delivered` (the admin trigger lands in Phase 5). `reverseLoyaltyForOrder` refunds redeemed points and claws back earned points, and is called from the customer cancel flow. Earn rate, redemption rate, and expiry all come from the `loyalty` setting.
+
+**Cancelling an order** (`cancelOrder` in `lib/account/actions.ts`) is only allowed while `status = 'pending_confirmation'` (`isCancellable` in `lib/orders/status.ts`) and reverses everything the order touched: restores tracked stock, deletes `coupon_usage`, calls `reverseLoyaltyForOrder`, cancels subscriptions created from the order, and writes status history. Only a `paid` order's `payment_status` flips to `refunded` — unpaid orders keep theirs.
+
+**Wishlist is DB-backed but the Zustand store stays the source of truth for the live header count.** `stores/wishlistStore.ts` persists the guest id list to `localStorage` (`uggalla-wishlist`) and carries a transient `authed` flag. `components/storefront/WishlistProvider.tsx` (mounted in the storefront layout) calls `syncWishlist(localIds)` once on mount: for signed-in users it merges the guest list into the DB and replaces the store with the authoritative list; guests keep their local list. `WishlistButton` mutates optimistically and persists via `toggleWishlistDb` when `authed` (reverting on failure). All wishlist server actions are in `lib/wishlist/actions.ts`.
+
+**Order presentation is centralized in `lib/orders/status.ts`** — status/payment labels, badge tones (`orderStatusVariant`), and the timeline step order (`timelineSteps`, `statusStepIndex`). Reuse these everywhere an order status is rendered rather than re-declaring label maps.
+
+**Invoices are print-to-PDF, not a PDF library.** `/account/orders/[orderNumber]/invoice` renders an `#invoice-print-area` and a client `window.print()` button, with print-isolation CSS that hides all other page chrome. There is intentionally no `@react-pdf/renderer` dependency.
+
 ## Build Phases
 
-Phases 1–3 are complete. Phases 4–6 are pending. Do not build features from future phases when working on the current one. Each phase has a spec in `docs/PHASE_N.md` and the full spec is in `MASTER_SPEC.md`.
+Phases 1–4 are complete. Phases 5–6 are pending. Do not build features from future phases when working on the current one. Each phase has a spec in `docs/PHASE_N.md` and the full spec is in `MASTER_SPEC.md`.
 
 | Phase | Scope |
 |---|---|
 | 1 ✅ | Foundation, auth, DB schema, brand system, homepage |
 | 2 ✅ | Products, catalog, search, PDP, wishlist, bulk request form |
 | 3 ✅ | Cart, checkout, PayHere + bank transfer + COD, orders, subscriptions |
-| 4 | Customer account, order history, loyalty points, reviews |
+| 4 ✅ | Customer account, order history, loyalty points, reviews, subscription & bulk-request management |
 | 5 | Full admin panel |
 | 6 | Email/WhatsApp notifications, SEO, performance, Vercel deployment |
+
+Two hooks were left ready for Phase 5: `earnLoyaltyForOrder` (call when an admin marks an order `delivered`) and `products.base_price` surfaced as a read-only calculated field.
 
 ## Key Conventions
 
@@ -112,8 +130,8 @@ Phases 1–3 are complete. Phases 4–6 are pending. Do not build features from 
 - Mutations use Server Actions, not API routes, unless it's a webhook.
 - `components/ui/` — base primitives (Button, Input, Card, etc.)
 - `components/shared/` — layout helpers used across both storefront and admin (BrandLogo, Container, FadeIn, DropletSVG)
-- `components/storefront/` — storefront-specific (Header, Footer, WhatsAppButton)
-- `stores/` — Zustand client-side stores. Currently only `wishlistStore.ts`, persisted to `localStorage` as `uggalla-wishlist`.
+- `components/storefront/` — storefront-specific (Header, Footer, WhatsAppButton); `components/account/` — account-area UI (nav, order/subscription/review/address/wishlist managers, shared `primitives.tsx`)
+- `stores/` — Zustand client-side stores: `cart.ts` (`uggalla-cart`) and `wishlistStore.ts` (`uggalla-wishlist`), both `localStorage`-persisted.
 - The `FadeIn` component (`components/shared/FadeIn.tsx`) wraps Framer Motion and respects `prefers-reduced-motion` globally via CSS in `globals.css`.
 - The Google OAuth button is conditionally rendered based on `isGoogleAuthEnabled` — the login page always works with email/password even when Google is not configured.
 - `globals.css` applies a global brand-green `:focus-visible` ring to **every** focusable element. To suppress it on a specific element (e.g. a text input styled as a borderless pill), add `focus-visible:ring-0 focus-visible:ring-offset-0` — don't remove the global rule.

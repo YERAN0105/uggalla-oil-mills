@@ -34,6 +34,16 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Protect /account routes — must be signed in (role check not required).
+  if (request.nextUrl.pathname.startsWith("/account")) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirect", request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Protect /admin routes
   if (request.nextUrl.pathname.startsWith("/admin")) {
     if (!user) {

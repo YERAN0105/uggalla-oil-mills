@@ -13,6 +13,11 @@ export async function signUp(formData: FormData) {
   const phone = formData.get("phone") as string;
   const password = formData.get("password") as string;
 
+  // Phone is required (alongside name + email).
+  if (!phone || !/^\+94\d{9}$/.test(phone)) {
+    return { error: "A valid phone number is required." };
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,

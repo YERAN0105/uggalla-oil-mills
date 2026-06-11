@@ -34,15 +34,15 @@ export default function RegisterPage() {
     }
 
     const digits = phoneDigits.trim();
-    if (digits) {
-      if (!/^\d{9}$/.test(digits)) {
-        setError("Phone number must be exactly 9 digits after +94 (e.g. 771234567).");
-        return;
-      }
-      formData.set("phone", "+94" + digits);
-    } else {
-      formData.delete("phone");
+    if (!digits) {
+      setError("Phone number is required.");
+      return;
     }
+    if (!/^\d{9}$/.test(digits)) {
+      setError("Phone number must be exactly 9 digits after +94 (e.g. 771234567).");
+      return;
+    }
+    formData.set("phone", "+94" + digits);
 
     startTransition(async () => {
       const result = await signUp(formData);
@@ -106,9 +106,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="phone">
-              Phone <span className="text-muted-foreground text-xs">(optional)</span>
-            </Label>
+            <Label htmlFor="phone">Phone</Label>
             <div className="flex">
               <span className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground select-none">
                 +94
@@ -120,6 +118,7 @@ export default function RegisterPage() {
                 inputMode="numeric"
                 placeholder="771234567"
                 maxLength={9}
+                required
                 value={phoneDigits}
                 onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, ""))}
                 autoComplete="tel-national"

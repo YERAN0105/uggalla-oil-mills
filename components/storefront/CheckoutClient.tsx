@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/brand";
 import { formatInColombo } from "@/lib/date";
 import { useCartStore, getSubtotal, computeCouponDiscount } from "@/stores/cart";
-import { createOrder, getSlotAvailabilityAction } from "@/lib/checkout/actions";
+import { createOrder, getSlotAvailabilityAction, checkEmailHasAccount } from "@/lib/checkout/actions";
 import type {
   DeliveryZone,
   TimeSlot,
@@ -97,17 +97,24 @@ function PhoneInput({
   onChange,
   id,
   invalid,
+  disabled,
 }: {
   value: string;
   onChange: (digits: string) => void;
   id: string;
   invalid?: boolean;
+  disabled?: boolean;
 }) {
   // Store the 9 national digits; the +94 prefix is fixed.
   const digits = value.startsWith("+94") ? value.slice(3) : value.replace(/^0/, "");
   return (
     <div className="flex">
-      <span className="flex items-center px-3 rounded-l-lg border border-r-0 border-input bg-muted text-sm text-muted-foreground select-none">
+      <span
+        className={cn(
+          "flex items-center px-3 rounded-l-lg border border-r-0 border-input bg-muted text-sm text-muted-foreground select-none",
+          disabled && "opacity-50"
+        )}
+      >
         +94
       </span>
       <Input
@@ -118,6 +125,7 @@ function PhoneInput({
         placeholder="771234567"
         value={digits}
         onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+        disabled={disabled}
         className={cn("rounded-l-none", invalid && "border-destructive")}
       />
     </div>
@@ -140,13 +148,24 @@ export function CheckoutClient(props: CheckoutClientProps) {
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
-  const [createAccount, setCreateAccount] = useState(false);
+  // Soft "you already have an account" nudge for guests (non-blocking).
+  const [emailHasAccount, setEmailHasAccount] = useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = useState(false);
+
+  const handleEmailBlur = async () => {
+    if (user) return;
+    const e = email.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) {
+      setEmailHasAccount(false);
+      return;
+    }
+    setEmailHasAccount(await checkEmailHasAccount(e));
+  };
 
   const [fulfillmentType, setFulfillmentType] = useState<"delivery" | "pickup">("delivery");
 
-  const [savedAddressId, setSavedAddressId] = useState<string | null>(
-    addresses.find((a) => a.is_default)?.id ?? addresses[0]?.id ?? null
-  );
+  const initialAddress = addresses.find((a) => a.is_default) ?? addresses[0];
+  const [savedAddressId, setSavedAddressId] = useState<string | null>(initialAddress?.id ?? null);
   const [useNewAddress, setUseNewAddress] = useState(addresses.length === 0);
   const [addr, setAddr] = useState({
     recipient: user?.name ?? "",
@@ -157,8 +176,14 @@ export function CheckoutClient(props: CheckoutClientProps) {
     postal_code: "",
   });
   const [saveAddress, setSaveAddress] = useState(false);
+  const [labelPreset, setLabelPreset] = useState<"Home" | "Work" | "Other">("Home");
+  const [customLabel, setCustomLabel] = useState("");
+  const addressLabel =
+    labelPreset === "Other" ? customLabel.trim() || "Other" : labelPreset;
 
-  const [deliveryZoneId, setDeliveryZoneId] = useState<string | null>(zones[0]?.id ?? null);
+  const [deliveryZoneId, setDeliveryZoneId] = useState<string | null>(
+    initialAddress?.delivery_zone_id ?? zones[0]?.id ?? null
+  );
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [timeSlotId, setTimeSlotId] = useState<string | null>(null);
   const [driverNote, setDriverNote] = useState("");
@@ -170,6 +195,9 @@ export function CheckoutClient(props: CheckoutClientProps) {
   const [loyaltyInput, setLoyaltyInput] = useState(0);
   const [slotRemaining, setSlotRemaining] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
+  // Set once an order is placed so the "empty cart → /cart" guard below doesn't
+  // hijack the navigation to the success page after we clear the cart.
+  const orderPlacedRef = useRef(false);
 
   // ─── Derived totals ─────────────────────────────────────────────────────────
   const subtotal = getSubtotal(items);
@@ -250,7 +278,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
     contactName: name.trim(),
     contactEmail: email.trim(),
     contactPhone: phone.startsWith("+94") || phone.startsWith("0") ? phone : `+94${phone}`,
-    createAccount: !user && createAccount,
+    createAccount: false,
     fulfillmentType,
     savedAddressId: fulfillmentType === "delivery" && !useNewAddress ? savedAddressId : null,
     address:
@@ -262,6 +290,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
             line2: addr.line2.trim(),
             city: addr.city.trim(),
             postal_code: addr.postal_code.trim(),
+            label: addressLabel,
           }
         : null,
     saveAddress: !!user && useNewAddress && saveAddress,
@@ -308,6 +337,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
         toast.error(result.error);
         return;
       }
+      orderPlacedRef.current = true;
       clearCart();
       router.push(result.redirectUrl);
     } catch {
@@ -319,7 +349,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
 
   // ─── Guards ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (mounted && items.length === 0) router.replace("/cart");
+    if (mounted && items.length === 0 && !orderPlacedRef.current) router.replace("/cart");
   }, [mounted, items.length, router]);
 
   if (!mounted) {
@@ -358,11 +388,17 @@ export function CheckoutClient(props: CheckoutClientProps) {
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="c-name">Full Name</Label>
-                <Input id="c-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+                <Input
+                  id="c-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  disabled={!!user}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="c-phone">Phone</Label>
-                <PhoneInput id="c-phone" value={phone} onChange={setPhone} />
+                <PhoneInput id="c-phone" value={phone} onChange={setPhone} disabled={!!user} />
               </div>
             </div>
             <div className="space-y-1 mt-4">
@@ -372,20 +408,27 @@ export function CheckoutClient(props: CheckoutClientProps) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                onBlur={handleEmailBlur}
                 autoComplete="email"
                 disabled={!!user}
               />
             </div>
-            {!user && (
-              <label className="flex items-center gap-2 mt-4 text-sm text-muted-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={createAccount}
-                  onChange={(e) => setCreateAccount(e.target.checked)}
-                  className="accent-green h-4 w-4"
-                />
-                Create an account for faster checkout next time
-              </label>
+
+            {!user && emailHasAccount && !nudgeDismissed && (
+              <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gold-warm/40 bg-gold/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-green-deep">
+                  Looks like you already have an account with this email. Log in for faster checkout and to
+                  track this order.
+                </p>
+                <div className="flex flex-shrink-0 gap-2">
+                  <Button asChild size="sm">
+                    <Link href="/login?redirect=/checkout">Log in</Link>
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setNudgeDismissed(true)}>
+                    Continue as guest
+                  </Button>
+                </div>
+              </div>
             )}
           </SectionCard>
 
@@ -424,37 +467,49 @@ export function CheckoutClient(props: CheckoutClientProps) {
             <SectionCard step={3} title="Delivery Address" icon={MapPin}>
               {addresses.length > 0 && (
                 <div className="space-y-2 mb-4">
-                  {addresses.map((a) => (
-                    <label
-                      key={a.id}
-                      className={cn(
-                        "flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors",
-                        !useNewAddress && savedAddressId === a.id
-                          ? "border-green bg-green/5"
-                          : "border-sand hover:border-green/40"
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="address"
-                        checked={!useNewAddress && savedAddressId === a.id}
-                        onChange={() => {
-                          setUseNewAddress(false);
-                          setSavedAddressId(a.id);
-                        }}
-                        className="mt-1 accent-green"
-                      />
-                      <div className="text-sm">
-                        <p className="font-semibold text-green-deep">
-                          {a.recipient}
-                          {a.label && <span className="text-muted-foreground font-normal"> · {a.label}</span>}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {[a.line1, a.line2, a.city, a.postal_code].filter(Boolean).join(", ")}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
+                  {addresses.map((a) => {
+                    const addressZone =
+                      zones.find((z) => z.id === a.delivery_zone_id) ?? zones[0] ?? null;
+                    return (
+                      <label
+                        key={a.id}
+                        className={cn(
+                          "flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors",
+                          !useNewAddress && savedAddressId === a.id
+                            ? "border-green bg-green/5"
+                            : "border-sand hover:border-green/40"
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="address"
+                          checked={!useNewAddress && savedAddressId === a.id}
+                          onChange={() => {
+                            setUseNewAddress(false);
+                            setSavedAddressId(a.id);
+                            // Restore the zone saved with this address (if any).
+                            if (a.delivery_zone_id) setDeliveryZoneId(a.delivery_zone_id);
+                          }}
+                          className="mt-1 accent-green"
+                        />
+                        <div className="text-sm">
+                          <p className="font-semibold text-green-deep">
+                            {a.recipient}
+                            {a.label && <span className="text-muted-foreground font-normal"> · {a.label}</span>}
+                          </p>
+                          <p className="text-muted-foreground">
+                            {[a.line1, a.line2, a.city, a.postal_code].filter(Boolean).join(", ")}
+                          </p>
+                          {addressZone && (
+                            <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                              <Truck className="h-3 w-3 text-green" />
+                              {addressZone.name} · {formatCurrency(Number(addressZone.fee))}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    );
+                  })}
                   <button
                     type="button"
                     onClick={() => setUseNewAddress(true)}
@@ -519,57 +574,97 @@ export function CheckoutClient(props: CheckoutClientProps) {
                       />
                     </div>
                   </div>
-                  {user && (
-                    <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={saveAddress}
-                        onChange={(e) => setSaveAddress(e.target.checked)}
-                        className="accent-green h-4 w-4"
-                      />
-                      Save this address for next time
-                    </label>
-                  )}
                 </div>
               )}
 
-              {/* Zone */}
-              <div className="space-y-1 mt-5">
-                <Label htmlFor="zone">Delivery Zone</Label>
-                <div className="space-y-2">
-                  {zones.map((z) => {
-                    const active = deliveryZoneId === z.id;
-                    return (
-                      <label
-                        key={z.id}
-                        className={cn(
-                          "flex items-center justify-between rounded-xl border p-3 cursor-pointer transition-colors",
-                          active ? "border-green bg-green/5" : "border-sand hover:border-green/40"
-                        )}
-                      >
-                        <div className="flex items-start gap-3">
-                          <input
-                            type="radio"
-                            name="zone"
-                            checked={active}
-                            onChange={() => setDeliveryZoneId(z.id)}
-                            className="mt-1 accent-green"
-                          />
-                          <div className="text-sm">
-                            <p className="font-medium text-green-deep">{z.name}</p>
-                            {z.estimated_time && (
-                              <p className="text-xs text-muted-foreground">{z.estimated_time}</p>
-                            )}
+              {/* Zone selector — only when entering a new address (the zone is
+                  established here). Saved addresses show their zone on the card
+                  above; editing it lives in account address management. */}
+              {useNewAddress && (
+                <div className="space-y-1 mt-5">
+                  <Label htmlFor="zone">Delivery Zone</Label>
+                  <div className="space-y-2">
+                    {zones.map((z) => {
+                      const active = deliveryZoneId === z.id;
+                      return (
+                        <label
+                          key={z.id}
+                          className={cn(
+                            "flex items-center justify-between rounded-xl border p-3 cursor-pointer transition-colors",
+                            active ? "border-green bg-green/5" : "border-sand hover:border-green/40"
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="radio"
+                              name="zone"
+                              checked={active}
+                              onChange={() => setDeliveryZoneId(z.id)}
+                              className="mt-1 accent-green"
+                            />
+                            <div className="text-sm">
+                              <p className="font-medium text-green-deep">{z.name}</p>
+                              {z.estimated_time && (
+                                <p className="text-xs text-muted-foreground">{z.estimated_time}</p>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-sm font-semibold text-green-deep">
-                          {formatCurrency(Number(z.fee))}
-                        </span>
-                      </label>
-                    );
-                  })}
+                          <span className="text-sm font-semibold text-green-deep">
+                            {formatCurrency(Number(z.fee))}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Save address — only when entering a new one while logged in */}
+              {useNewAddress && user && (
+                <div className="mt-4 mb-6 space-y-3">
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={saveAddress}
+                      onChange={(e) => setSaveAddress(e.target.checked)}
+                      className="accent-green h-4 w-4"
+                    />
+                    Save this address for next time
+                  </label>
+
+                  {saveAddress && (
+                    <div className="space-y-2 pl-6">
+                      <p className="text-xs font-medium text-muted-foreground">Name this address</p>
+                      <div className="flex flex-wrap gap-2">
+                        {(["Home", "Work", "Other"] as const).map((preset) => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => setLabelPreset(preset)}
+                            className={cn(
+                              "rounded-full border px-4 py-1.5 text-sm transition-colors",
+                              labelPreset === preset
+                                ? "border-green bg-green/10 text-green font-medium"
+                                : "border-sand text-muted-foreground hover:border-green/40"
+                            )}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                      {labelPreset === "Other" && (
+                        <Input
+                          aria-label="Custom address name"
+                          placeholder="e.g. Mum's place, Office 2"
+                          value={customLabel}
+                          onChange={(e) => setCustomLabel(e.target.value.slice(0, 50))}
+                          maxLength={50}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <DateSlotPicker
                 date={date}

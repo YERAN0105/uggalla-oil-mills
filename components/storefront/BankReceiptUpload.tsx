@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { UploadCloud, CheckCircle2, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,12 +12,20 @@ interface BankReceiptUploadProps {
   orderNumber: string;
   token: string;
   alreadyUploaded?: boolean;
+  /** Called after a successful upload so the parent can refresh the order status. */
+  onUploaded?: () => void;
 }
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
 
-export function BankReceiptUpload({ orderNumber, token, alreadyUploaded }: BankReceiptUploadProps) {
+export function BankReceiptUpload({
+  orderNumber,
+  token,
+  alreadyUploaded,
+  onUploaded,
+}: BankReceiptUploadProps) {
+  const router = useRouter();
   const [done, setDone] = useState(!!alreadyUploaded);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -47,6 +56,10 @@ export function BankReceiptUpload({ orderNumber, token, alreadyUploaded }: BankR
       }
       setDone(true);
       toast.success("Receipt uploaded — we'll verify it shortly.");
+      onUploaded?.();
+      // Re-render server components (e.g. the order-success page) so the status
+      // reflects "Payment under review". Harmless on client-state pages.
+      router.refresh();
     } catch {
       toast.error("Upload failed. Please try again.");
     } finally {
