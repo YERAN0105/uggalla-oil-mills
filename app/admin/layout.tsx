@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
+import { requireAdmin } from "@/lib/admin/guard";
+import { getBadgeCounts } from "@/lib/admin/badges";
+import { AdminShell } from "@/components/admin/AdminShell";
 
-export const metadata: Metadata = { title: { default: "Admin", template: "%s | Admin — Uggalla Oil Mills" } };
+export const metadata: Metadata = {
+  title: { default: "Admin", template: "%s | Admin — Uggalla Oil Mills" },
+};
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const user = await requireAdmin();
+  const badges = await getBadgeCounts();
+
   return (
-    <div className="min-h-screen bg-green-deep text-white">
+    <AdminShell user={user} badges={badges}>
       {children}
-    </div>
+    </AdminShell>
   );
 }
