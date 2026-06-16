@@ -22,8 +22,8 @@ import { formatCurrency } from "@/lib/brand";
 import { formatDateTime } from "@/lib/date";
 import {
   ORDER_STATUS_LABEL,
-  PAYMENT_STATUS_LABEL,
-  PAYMENT_METHOD_LABEL,
+  paymentStatusLabel,
+  paymentMethodLabel,
   orderStatusVariant,
 } from "@/lib/orders/status";
 import { bulkUpdateOrderStatus, bulkMarkPaid, exportOrdersCsv } from "@/lib/admin/orders";
@@ -333,10 +333,13 @@ export function OrdersClient({
                   <TableCell className="text-sm font-medium">{formatCurrency(o.total)}</TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <div className="text-xs text-muted-foreground">
-                      {PAYMENT_METHOD_LABEL[o.payment_method] ?? o.payment_method}
+                      {paymentMethodLabel(o.payment_method, o.fulfillment_type)}
                     </div>
                     <Badge variant={o.payment_status === "paid" ? "sage" : "secondary"} className="text-[10px]">
-                      {PAYMENT_STATUS_LABEL[o.payment_status] ?? o.payment_status}
+                      {paymentStatusLabel({
+                        paymentMethod: o.payment_method,
+                        paymentStatus: o.payment_status,
+                      })}
                     </Badge>
                   </TableCell>
                   <TableCell>

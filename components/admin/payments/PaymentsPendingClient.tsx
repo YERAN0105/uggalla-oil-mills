@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { AdminPageHeader, AdminEmpty, Panel } from "@/components/admin/primitives";
+import { AdminPageHeader, AdminEmpty, Panel, ConfirmDialog } from "@/components/admin/primitives";
 import { approveBankTransfer, rejectBankTransfer } from "@/lib/admin/orders";
 import { formatCurrency } from "@/lib/brand";
 import { formatDateTime } from "@/lib/date";
@@ -34,12 +34,15 @@ export function PaymentsPendingClient({ rows }: { rows: Row[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rejectId, setRejectId] = useState<string | null>(null);
+  const [approveId, setApproveId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
-  const approve = async (id: string) => {
-    setPendingId(id);
-    const res = await approveBankTransfer(id);
+  const approve = async () => {
+    if (!approveId) return;
+    setPendingId(approveId);
+    const res = await approveBankTransfer(approveId);
     setPendingId(null);
+    setApproveId(null);
     if (!res.ok) return toast.error(res.error);
     toast.success("Payment approved.");
     router.refresh();
@@ -96,7 +99,7 @@ export function PaymentsPendingClient({ rows }: { rows: Row[] }) {
               </div>
               <div className="mt-auto flex gap-2">
                 <Button
-                  onClick={() => approve(r.receipt_id)}
+                  onClick={() => setApproveId(r.receipt_id)}
                   disabled={pendingId === r.receipt_id}
                   className="flex-1 gap-2"
                   size="sm"
@@ -140,6 +143,17 @@ export function PaymentsPendingClient({ rows }: { rows: Row[] }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!approveId}
+        onOpenChange={(o) => !o && setApproveId(null)}
+        title="Approve this bank transfer?"
+        description="This marks the order as paid and confirms it. You can reopen it for review from the order page if needed."
+        confirmLabel="Approve payment"
+        destructive={false}
+        loading={!!pendingId}
+        onConfirm={approve}
+      />
     </>
   );
 }

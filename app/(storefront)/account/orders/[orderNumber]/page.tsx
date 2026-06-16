@@ -17,9 +17,9 @@ import { signOrderToken } from "@/lib/orders/token";
 import { formatCurrency } from "@/lib/brand";
 import { formatShortDate } from "@/lib/date";
 import {
-  PAYMENT_METHOD_LABEL,
-  PAYMENT_STATUS_LABEL,
+  paymentMethodLabel,
   INTERVAL_LABEL,
+  paymentStatusLabel,
 } from "@/lib/orders/status";
 
 export const metadata: Metadata = { title: "Order Details" };
@@ -43,19 +43,20 @@ export default async function OrderDetailPage({ params }: PageProps) {
   const token = signOrderToken(order.order_number);
   const shop = await getShopInfo();
   const showBankUpload =
+    order.status !== "cancelled" &&
+    order.status !== "refunded" &&
     order.payment_method === "bank_transfer" &&
     order.payment_status === "pending_transfer" &&
     (!order.bank_receipt || order.bank_receipt.status === "rejected");
   const bankDetails = showBankUpload ? await getBankDetails() : null;
 
-  function paymentStatusLabel(): string {
-    if (order!.payment_method === "bank_transfer" && order!.payment_status === "pending_transfer") {
-      if (order!.bank_receipt?.status === "rejected") return "Receipt rejected — please re-upload";
-      if (order!.bank_receipt) return "Payment under review";
-      return "Awaiting bank transfer";
-    }
-    return PAYMENT_STATUS_LABEL[order!.payment_status] ?? order!.payment_status;
-  }
+  const paymentLabel = paymentStatusLabel({
+    paymentMethod: order.payment_method,
+    paymentStatus: order.payment_status,
+    receiptStatus: order.bank_receipt?.status,
+    orderStatus: order.status,
+    context: "live",
+  });
 
   return (
     <div>
@@ -75,7 +76,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         </div>
         <div className="flex items-center gap-2">
           <OrderStatusBadge status={order.status} />
-          <Badge variant={order.payment_status === "paid" ? "default" : "gold"}>{paymentStatusLabel()}</Badge>
+          <Badge variant={order.payment_status === "paid" ? "default" : "gold"}>{paymentLabel}</Badge>
         </div>
       </div>
 
@@ -88,6 +89,25 @@ export default async function OrderDetailPage({ params }: PageProps) {
       <div className="mb-6">
         <OrderActions orderNumber={order.order_number} status={order.status} whatsapp={shop.whatsapp} />
       </div>
+
+      {/* Bank transfer: receipt received & under review */}
+      {order.status !== "cancelled" &&
+        order.status !== "refunded" &&
+        order.payment_method === "bank_transfer" &&
+        order.payment_status === "pending_transfer" &&
+        order.bank_receipt?.status === "pending" && (
+          <div className="mb-6 rounded-2xl border border-green/30 bg-green/5 p-5">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green" />
+              <div>
+                <p className="font-semibold text-green-deep">Receipt received — we&apos;re verifying your payment</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  We&apos;ll confirm your order once the transfer is verified. This usually takes 1–2 business days.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
       {/* Bank transfer upload */}
       {showBankUpload && bankDetails && (
@@ -107,7 +127,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
             <CopyableField label="Branch" value={bankDetails.branch} />
             <CopyableField label="Reference" value={order.order_number} copyable />
           </div>
-          <BankReceiptUpload orderNumber={order.order_number} token={token} />
+          <BankReceiptUpload orderNumber={order.order_number} token={token} showSuccessCard={false} />
         </div>
       )}
 
@@ -215,7 +235,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
         {/* Pricing */}
         <div className="space-y-2 rounded-2xl border border-sand bg-white p-5 text-sm">
           <p className="mb-1 text-sm font-semibold text-green-deep">Payment</p>
-          <Line label="Method" value={PAYMENT_METHOD_LABEL[order.payment_method] ?? order.payment_method} />
+          <Line label="Method" value={paymentMethodLabel(order.payment_method, order.fulfillment_type)} />
           <Line label="Subtotal" value={formatCurrency(order.subtotal)} />
           {order.discount_amount > 0 && (
             <Line label="Discount" value={`−${formatCurrency(order.discount_amount)}`} accent />

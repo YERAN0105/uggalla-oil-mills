@@ -69,7 +69,9 @@ export function OrderStatusEditor({
       <ol className="relative ml-3 space-y-4 border-l border-sand pl-6">
         {steps.map((step, i) => {
           const done = i <= reached && status !== "cancelled" && status !== "refunded";
-          const hist = history.find((h) => h.status === step.key);
+          // Latest entry for this status (history is oldest-first), so a reverted
+          // and re-reached step shows its new time/admin, not the original stale one.
+          const hist = [...history].reverse().find((h) => h.status === step.key);
           return (
             <li key={step.key} className="relative">
               <span
@@ -82,7 +84,9 @@ export function OrderStatusEditor({
               <p className={`text-sm font-medium ${done ? "text-green-deep" : "text-muted-foreground"}`}>
                 {step.label}
               </p>
-              {hist && (
+              {/* Only show the time/admin for steps currently reached, so a
+                  reverted (unchecked) step never shows a stale time. */}
+              {done && hist && (
                 <p className="text-xs text-muted-foreground">
                   {formatDateTime(hist.changed_at)}
                   {hist.changed_by_name ? ` · ${hist.changed_by_name}` : ""}

@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin/guard";
 import { logActivity } from "@/lib/admin/activity";
 import { isPayHereEnabled } from "@/lib/integrations";
+import { notify } from "@/lib/notifications";
+import { signOrderToken } from "@/lib/orders/token";
 import { formatInColombo } from "@/lib/date";
 import { addDays } from "date-fns";
 import type { ActionResult } from "@/types/admin";
@@ -189,6 +191,45 @@ export async function convertBulkToOrder(id: string): Promise<ActionResult<{ ord
     .from("bulk_requests")
     .update({ converted_order_id: (order as any).id, status: "completed" })
     .eq("id", id);
+
+  // This order is created already-confirmed (not a fat-finger-prone transition),
+  // so it gets an IMMEDIATE confirmation — it does NOT go through the debounce
+  // buffer. Record the send in the ledger so the debounced dispatcher will never
+  // re-send "confirmed" for this order. Best-effort; never blocks the conversion.
+  try {
+    const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    const viewOrderUrl = `${base}/orders/${encodeURIComponent(orderNumber)}?t=${signOrderToken(orderNumber)}`;
+    const results = await notify("order_confirmed", {
+      orderNumber,
+      status: "confirmed",
+      email: row.email ?? null,
+      phone: row.phone ?? null,
+      recipientName: row.name ?? null,
+      items: [{ name: label, sizeLabel: `${row.quantity} ${row.unit}`, quantity: 1, lineTotal: total }],
+      subtotal: total,
+      deliveryFee: 0,
+      discount: 0,
+      loyaltyDiscount: 0,
+      tax: 0,
+      total,
+      fulfillmentType: row.fulfillment_type === "pickup" ? "pickup" : "delivery",
+      deliveryDate: row.preferred_date ?? null,
+      viewOrderUrl,
+    });
+    const sentChannels = results.filter((r) => r.status === "sent");
+    if (sentChannels.length > 0) {
+      await db.from("order_notification_ledger").upsert(
+        sentChannels.map((r) => ({
+          order_id: (order as any).id,
+          status: "confirmed",
+          channel: r.channel,
+        })),
+        { onConflict: "order_id,status,channel", ignoreDuplicates: true }
+      );
+    }
+  } catch (err) {
+    console.error("[convertBulkToOrder] confirmation notify failed:", err);
+  }
 
   await logActivity(admin.id, {
     action: "bulk.converted",

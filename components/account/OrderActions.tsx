@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RotateCcw, XCircle, MessageCircle, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -99,10 +98,10 @@ export function OrderActions({ orderNumber, status, whatsapp }: Props) {
       </Button>
 
       <Button asChild variant="outline" className="gap-2">
-        <Link href={`/account/orders/${orderNumber}/invoice`}>
+        <a href={`/account/orders/${orderNumber}/invoice`} target="_blank" rel="noopener noreferrer">
           <FileText className="h-4 w-4" />
           Invoice
-        </Link>
+        </a>
       </Button>
 
       <Button asChild variant="outline" className="gap-2">

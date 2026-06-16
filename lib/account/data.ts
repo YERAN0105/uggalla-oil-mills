@@ -133,7 +133,7 @@ const DETAIL_SELECT = `
   delivery_zone:delivery_zone_id(id, name, estimated_time),
   time_slot:time_slot_id(id, label),
   order_status_history(status, note, changed_at),
-  bank_transfer_receipts(id, status)
+  bank_transfer_receipts(id, status, uploaded_at)
 `;
 
 export async function getAccountOrderDetail(
@@ -191,7 +191,12 @@ export async function getAccountOrderDetail(
       reviewed: reviewedItemIds.has(i.id),
     })),
     history,
-    bank_receipt: (row.bank_transfer_receipts ?? [])[0] ?? null,
+    bank_receipt: (() => {
+      const recs: any[] = (row.bank_transfer_receipts ?? []).sort(
+        (a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+      );
+      return recs.find((r) => r.status === "pending") ?? recs[0] ?? null;
+    })(),
   };
 }
 

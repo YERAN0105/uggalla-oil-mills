@@ -5,6 +5,7 @@ import {
   mapPayHereStatus,
   type PayHereNotification,
 } from "@/lib/payments/payhere";
+import { enqueueOrderNotification } from "@/lib/notifications/pending";
 
 // PayHere POSTs application/x-www-form-urlencoded server-to-server. We always
 // return 200 so PayHere doesn't retry indefinitely; problems are logged and the
@@ -87,9 +88,11 @@ export async function POST(request: Request) {
         status: orderStatus,
         note: `PayHere: ${outcome}`,
       });
+      // Buffer the status-change notification (confirmed on paid, refunded on
+      // chargeback). Debounced + forward-only via the dispatcher.
+      await enqueueOrderNotification(order.id, orderStatus);
     }
   }
 
-  // TODO Phase 6: notify('payment_received') on paid.
   return NextResponse.json({ ok: true });
 }

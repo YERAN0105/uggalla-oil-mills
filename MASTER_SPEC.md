@@ -575,6 +575,26 @@ The project is built in **6 phases** (`PHASE_1.md` … `PHASE_6.md`). Run them s
 5. **Phase 5: Admin Panel** — Dashboard, brands, categories, products+sizes, orders, customers, bulk requests (+ quote + convert), bank approvals, coupons, banners, zones, slots, subscriptions oversight, reviews, loyalty, settings, logs
 6. **Phase 6: Notifications, Polish & Launch** — Email + WhatsApp for all triggers, subscription reminder cron, bulk quote notifications, the optional bulk quote online-payment page (`/quote/[token]`), review-request cron, SEO, sitemap, OG images, animation pass, accessibility audit, performance pass, deployment to Vercel
 
+> **⏳ Pending post-deploy steps:** Some work can only be finished after the Vercel
+> deploy (e.g. the `pg_cron`/`pg_net` schedule for the debounced order-status
+> notification dispatcher, which Supabase cloud can't point at `localhost`). These
+> are tracked in [`docs/POST_DEPLOY_STEPS.md`](docs/POST_DEPLOY_STEPS.md) — check
+> that file before considering launch complete.
+>
+> **Order-status notification policy (FINAL):** customer status notifications are
+> **debounced (≈3 min) and forward-only**. Backward moves and re-entered statuses
+> are **silent — no correction or apology emails** on the status ladder. Terminal
+> statuses (cancelled/refunded) notify once. Buffer: `pending_order_notifications`;
+> "already sent" source of truth: `order_notification_ledger`.
+>
+> **Bank-receipt accept/reject (scoped exception):** this is a two-way toggle, so
+> it runs on its own debounce track (`pending_receipt_notifications` +
+> `order_receipt_notice`). Debounce absorbs admin fumbling (approve→undo→reject
+> collapses to one clean email; an undo cancels the pending email); a **correction
+> email with an apology** is sent only for a *genuine later reversal* (the outcome
+> truly flips after the customer was already told the opposite). Approve sends one
+> email that also serves as the order confirmation.
+
 ---
 
 ## 11. Environment Variables

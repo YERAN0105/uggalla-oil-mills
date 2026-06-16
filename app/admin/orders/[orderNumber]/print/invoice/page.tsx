@@ -5,7 +5,7 @@ import { getShopInfo } from "@/lib/settings";
 import { PrintInvoiceButton } from "@/components/account/PrintInvoiceButton";
 import { formatCurrency, brand } from "@/lib/brand";
 import { formatShortDate } from "@/lib/date";
-import { PAYMENT_METHOD_LABEL, PAYMENT_STATUS_LABEL } from "@/lib/orders/status";
+import { paymentMethodLabel, deriveOrderContacts, paymentStatusLabel } from "@/lib/orders/status";
 
 export const metadata: Metadata = { title: "Invoice" };
 
@@ -29,6 +29,18 @@ export default async function AdminInvoicePage({
   const shop = await getShopInfo();
   const isDelivery = order.fulfillment_type === "delivery";
   const addr = order.address_snapshot;
+  const contacts = deriveOrderContacts({
+    recipientName: addr?.recipient ?? null,
+    recipientPhone: addr?.phone ?? null,
+    accountName: order.customer_name,
+    accountPhone: order.customer_phone,
+    accountEmail: order.customer_email,
+    hasAccount: !!order.user_id,
+  });
+  const billedName = contacts.recipientName ?? order.customer_name ?? "Customer";
+  const billedPhone = isDelivery
+    ? contacts.recipientPhone ?? order.customer_phone
+    : order.customer_phone;
 
   return (
     <div>
@@ -55,20 +67,33 @@ export default async function AdminInvoicePage({
         <div className="grid gap-6 py-6 sm:grid-cols-2">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Billed to</p>
-            <p className="mt-1 font-medium">{addr?.recipient ?? order.customer_name ?? "Customer"}</p>
-            {order.customer_phone && <p className="text-sm text-muted-foreground">{order.customer_phone}</p>}
+            <p className="mt-1 font-medium">{billedName}</p>
+            {billedPhone && <p className="text-sm text-muted-foreground">{billedPhone}</p>}
             {isDelivery && addr && (
               <p className="text-sm text-muted-foreground">
                 {[addr.line1, addr.line2, addr.city, addr.postal_code].filter(Boolean).join(", ")}
               </p>
             )}
             {!isDelivery && <p className="text-sm text-muted-foreground">Pickup order</p>}
+            {contacts.secondaryContact && (
+              <p className="mt-2 text-sm text-muted-foreground">
+                <span className="font-medium text-green-deep">Secondary contact:</span>{" "}
+                {contacts.secondaryContact.name}
+                {contacts.secondaryContact.phone ? ` · ${contacts.secondaryContact.phone}` : ""}
+              </p>
+            )}
           </div>
           <div className="sm:text-right">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Payment</p>
-            <p className="mt-1 text-sm">{PAYMENT_METHOD_LABEL[order.payment_method] ?? order.payment_method}</p>
+            <p className="mt-1 text-sm">{paymentMethodLabel(order.payment_method, order.fulfillment_type)}</p>
             <p className="text-sm text-muted-foreground">
-              {PAYMENT_STATUS_LABEL[order.payment_status] ?? order.payment_status}
+              {paymentStatusLabel({
+                paymentMethod: order.payment_method,
+                paymentStatus: order.payment_status,
+                receiptStatus: order.bank_receipt?.status,
+                orderStatus: order.status,
+                context: "invoice",
+              })}
             </p>
             {order.delivery_date && (
               <p className="mt-1 text-sm text-muted-foreground">

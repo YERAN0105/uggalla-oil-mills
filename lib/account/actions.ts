@@ -5,6 +5,7 @@ import { addDays, format as formatDate } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { reverseLoyaltyForOrder } from "@/lib/loyalty/engine";
+import { enqueueOrderNotification } from "@/lib/notifications/pending";
 import { isCancellable } from "@/lib/orders/status";
 import { accountAddressSchema, profileSchema } from "@/lib/account/schema";
 import { nowInColombo } from "@/lib/date";
@@ -234,7 +235,10 @@ export async function cancelOrder(orderNumber: string, reason: string): Promise<
     changed_by: userId,
   });
 
-  // TODO Phase 6: notify('order_cancelled', { orderId: order.id, reason })
+  // Buffer the cancellation notification (debounced; dispatched later). Runs via
+  // the service-role client inside enqueueOrderNotification, so it works from this
+  // customer context against the RLS-locked buffer table.
+  await enqueueOrderNotification(order.id, "cancelled");
 
   revalidatePath("/account/orders");
   revalidatePath(`/account/orders/${orderNumber}`);

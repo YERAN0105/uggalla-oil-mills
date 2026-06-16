@@ -52,11 +52,11 @@ There are no automated tests yet (added in a later phase).
 
 ## Database
 
-Migrations in `supabase/migrations/` must be run in order (001 → 007) via the Supabase SQL Editor or CLI. RLS is enabled on every table. The helper function `public.is_admin()` is used throughout RLS policies — do not bypass it. (Migration 007 adds `users.deleted_at` for soft-deleting accounts, a unique index enforcing one review per `order_item_id`, and a customer "delete own review" policy.)
+Migrations in `supabase/migrations/` must be run in order (001 → 011) via the Supabase SQL Editor or CLI. RLS is enabled on every table. The helper function `public.is_admin()` is used throughout RLS policies — do not bypass it. (Migration 007 adds `users.deleted_at` for soft-deleting accounts, a unique index enforcing one review per `order_item_id`, and a customer "delete own review" policy. Migration 008 — Phase 5 — adds `users.admin_notes` and the `banner-images` + `site-assets` storage buckets; the admin panel's customer notes, banner images, and shop logo / OG uploads all fail until it is run. Migrations 009–011 — Phase 6 Part A — add the notification debounce buffers + ledger; they are additive/idempotent, but the `pg_cron` schedule that drives the dispatcher is created **post-deploy**, not in a migration — see `docs/POST_DEPLOY_STEPS.md` and "Notifications & Crons" below.)
 
 The `public.users` table extends `auth.users` via a trigger (`handle_new_user`). Always upsert into `public.users` by `id`; never insert a row that doesn't have a matching `auth.users` entry.
 
-**`products.base_price` is trigger-managed (migration 004).** A trigger keeps it equal to `MIN(product_sizes.price)` on every size insert/update/delete. Treat it as read-only — never set it by hand in app code, and in the Phase 5 admin panel surface it as a calculated field (require at least one size before a product can be published, since the trigger only fires once sizes exist).
+**`products.base_price` is trigger-managed (migration 004) for retail products.** A trigger keeps it equal to `MIN(product_sizes.price)` on every size insert/update/delete. Treat it as read-only for sized products — never set it by hand. The admin product form surfaces it as a calculated "from" price and blocks publishing a retail product until it has ≥1 size. **Exception: bulk products have no sizes**, so `saveProduct` (`lib/admin/products.ts`) writes `base_price` directly for `purchase_type = 'bulk_quote'` (the trigger never fires for them).
 
 ## Product Price Model
 
@@ -99,7 +99,7 @@ The logged-in account lives under `app/(storefront)/account/` with a server-guar
 
 **Account reads use the service-role admin client filtered by `user_id`** (`lib/account/data.ts`), the same pattern as order writes. This is deliberate: RLS-bound joins would drop rows whose referenced product has since been unpublished (e.g. a subscription or wishlist item for a now-hidden product), and the account needs to surface those as "no longer available". Authorization is the `.eq("user_id", userId)` filter. Read models live in `types/account.ts`.
 
-**Loyalty earn/reverse logic is in `lib/loyalty/engine.ts` — a plain server module, NOT a `"use server"` file**, so it is never exposed as a client-callable action. `earnLoyaltyForOrder` is idempotent (guarded by an existing `earn` transaction) and is wired to fire when an order becomes `delivered` (the admin trigger lands in Phase 5). `reverseLoyaltyForOrder` refunds redeemed points and claws back earned points, and is called from the customer cancel flow. Earn rate, redemption rate, and expiry all come from the `loyalty` setting.
+**Loyalty earn/reverse logic is in `lib/loyalty/engine.ts` — a plain server module, NOT a `"use server"` file**, so it is never exposed as a client-callable action. `earnLoyaltyForOrder` is idempotent (guarded by an existing `earn` transaction) and fires from `updateOrderStatus` (`lib/admin/orders.ts`) when an admin sets an order to `delivered`. `reverseLoyaltyForOrder` refunds redeemed points and claws back earned points, and is called from both the customer cancel flow and the admin cancel/refund flows. Earn rate, redemption rate, and expiry all come from the `loyalty` setting (editable in `/admin/loyalty`).
 
 **Cancelling an order** (`cancelOrder` in `lib/account/actions.ts`) is only allowed while `status = 'pending_confirmation'` (`isCancellable` in `lib/orders/status.ts`) and reverses everything the order touched: restores tracked stock, deletes `coupon_usage`, calls `reverseLoyaltyForOrder`, cancels subscriptions created from the order, and writes status history. Only a `paid` order's `payment_status` flips to `refunded` — unpaid orders keep theirs.
 
@@ -109,9 +109,51 @@ The logged-in account lives under `app/(storefront)/account/` with a server-guar
 
 **Invoices are print-to-PDF, not a PDF library.** `/account/orders/[orderNumber]/invoice` renders an `#invoice-print-area` and a client `window.print()` button, with print-isolation CSS that hides all other page chrome. There is intentionally no `@react-pdf/renderer` dependency.
 
+## Admin Panel (Phase 5)
+
+The entire admin experience lives under `app/admin/` and is a separate world from the storefront — neutral/utilitarian, data-dense. It follows a strict file-layout convention; match it when adding admin features.
+
+**Layout & guard.** `app/admin/layout.tsx` calls `requireAdmin()` (`lib/admin/guard.ts`) and renders `<AdminShell>` (`components/admin/`), which holds the sidebar, top bar, and ⌘K global search (`AdminSearch` → `adminGlobalSearch` in `lib/admin/search.ts`). Middleware already blocks non-admins; `requireAdmin()` (and `getAdminUser()`) is defense-in-depth **and** the source of the acting admin's id for activity logging. Sidebar attention badges come from `getBadgeCounts()` (`lib/admin/badges.ts`).
+
+**File-layout convention for each admin domain:**
+- **Actions** → `lib/admin/<domain>.ts`, a `"use server"` file exporting only async server actions. Every action starts with `const admin = await requireAdmin();`, performs the write via `createAdminClient()` (service-role; **all admin writes bypass RLS and authorize in app code**), calls `logActivity(admin.id, { action, targetTable, targetId, metadata })`, then `revalidatePath(...)`. Actions return the shared `ActionResult<T>` type (`types/admin.ts`): `{ ok: true; data? }` | `{ ok: false; error; fieldErrors? }`.
+- **Reads** → `lib/admin/<domain>-data.ts`, a plain (non-`"use server"`) server module. Keep reads out of the actions file — a `"use server"` module may only export async actions, so mixing a data fetcher in breaks the build.
+- **Pages** → `app/admin/<domain>/page.tsx`, thin server components that parse `searchParams`, call the `-data` reader, and render a client component.
+- **UI** → `components/admin/<domain>/`, the interactive client components.
+
+**Validation.** All admin form schemas are centralized in `lib/admin/schemas.ts` (one file, not co-located per-form like the storefront convention below). Client forms and server actions both import from it.
+
+**Activity logging is mandatory** on every write — `logActivity` (`lib/admin/activity.ts`) is fire-and-forget (never throws). The `/admin/logs` viewer reads these rows.
+
+**Shared admin building blocks (reuse, don't reinvent):**
+- `components/admin/primitives.tsx` — `AdminPageHeader`, `AdminEmpty`, `Panel`, `Field`, `ConfirmDialog`.
+- `components/admin/SortableList.tsx` — generic drag-to-reorder via **native HTML5 DnD** (no `dnd-kit` dependency). Used for brands, categories, banners, and product images.
+- `components/admin/ImageUpload.tsx` (single) + `ProductImagesManager` (multi) — uploads run **browser-side** through `lib/admin/upload.ts` (`uploadPublicImage(bucket, file)`) using the *browser* Supabase client; storage RLS grants the authenticated admin write access, so no upload route is needed. Buckets: `product-images`, `brand-images`, `category-images`, `banner-images`, `site-assets`.
+- `components/ui/` gained `tabs`, `switch` (dependency-free toggle), `dropdown-menu`, and `table` for the admin.
+
+**Order/bulk specifics.** `updateOrderStatus`, `cancelOrderAdmin`, bank approve/reject, CSV export, etc. live in `lib/admin/orders.ts`; order detail reads in `lib/admin/orders-data.ts`. Print pages (`/admin/orders/[orderNumber]/print/{invoice,packing-slip}`) reuse the same print-isolation CSS pattern as the account invoice. Converting a bulk request to an order (`convertBulkToOrder` in `lib/admin/bulk-requests.ts`) creates a single custom bulk line item with `source = 'bulk_conversion'`.
+
+**Rich text is a plain `Textarea`** (product description) — there is intentionally no TipTap/editor dependency.
+
+**Settings tab caveat:** PayHere keys stay env-managed (the Payment tab shows status only, never stores keys), consistent with the `lib/integrations.ts` flag contract. The Notifications tab and Maintenance toggle are saved but only take effect in Phase 6.
+
+## Notifications & Crons (Phase 6, Part A — in progress)
+
+Customer-facing order notifications are **debounced and dispatched by a cron**, never sent inline from a status write. The flow is: status changes **enqueue** a buffered row → a secured cron route **drains** due rows and decides what to send → `notify()` fans out to channels. Four moving parts, all under `lib/notifications/` + `app/api/cron/`:
+
+- **Enqueue** (`lib/notifications/pending.ts`). Every order status-write site calls `enqueueOrderNotification(orderId, status)` instead of notifying directly; bank-receipt decisions call `enqueueReceiptNotification(orderId, outcome, receiptId)`. Each is an UPSERT of **one row per order** (`onConflict: "order_id"`) into its own buffer table (`pending_order_notifications` / `pending_receipt_notifications`), setting `dispatch_after = now() + COOL_OFF_MS` (3 min). A rapid second change overwrites the row and pushes `dispatch_after` out again — **that overwrite *is* the debounce.** Writes use the service-role client (the buffer tables have no public RLS), and the helpers are fire-and-forget — they never throw into the caller's transaction.
+- **Dispatch** (`app/api/cron/dispatch-notifications/route.ts`). A `POST` route guarded by `Authorization: Bearer ${CRON_SECRET}`. Drains due rows (`dispatch_after <= now()`, `attempts < MAX_ATTEMPTS`, batch of 50) and applies the send rules below. The **scheduler is deferred to post-deploy** — Supabase `pg_cron`/`pg_net` can't reach localhost — so locally you drive the whole thing by hand with `curl` (see `docs/POST_DEPLOY_STEPS.md`, which also has the production scheduling SQL and a manual test matrix).
+- **Send rules (this is the heart of it):**
+  - *Order ladder* — forward-only. `order_notification_ledger` is the permanent source of truth for "already notified about this status on this channel". A progression status sends **only if strictly forward** of every logged progression status (rank via `statusStepIndex`); terminal statuses (`cancelled`/`refunded`) send **once**. Backward moves / re-entries are silent. This protection is permanent, not just within the cool-off.
+  - *Receipt track* — separate, two-way, on its own buffer + `order_receipt_notice` memory. A `reverted` (admin undo) within the window silently cancels the pending email. An apology-prefixed **correction** fires only on a genuine outcome flip **anchored to the same `receipt_id`** the customer was last told about (a decision on a re-uploaded receipt is a clean email; null ids never trigger a false apology). An approval also writes `confirmed` into the order ledger so the ladder never re-sends a separate confirmation.
+  - *Retry* — if every channel genuinely **failed** (not `skipped`), increment `attempts` + record `last_error` and leave the row for the next tick; at `MAX_ATTEMPTS` (5) it's parked. A `skipped` channel (integration disabled / no contact on file) is **not** a failure and never retries. Rows are removed with a **conditional delete** keyed on the captured `dispatch_after`, so a re-enqueue mid-flight is never clobbered.
+- **Channels** (`notify()` in `lib/notifications/index.ts`). Fans out to email + WhatsApp via `Promise.allSettled`, returns a per-channel `sent | failed | skipped`, and best-effort logs every attempt to `notification_logs` (audit only — the ledger is the real dedupe). Email uses the branded React Email template `emails/OrderStatusEmail.tsx` through `lib/notifications/email.ts` (Resend, gated by `isResendEnabled`). WhatsApp (`lib/notifications/whatsapp.ts`) is a **stub** that always reports `skipped` until the Phase 6 Cloud API work — same "build fully, gate the entry point" pattern as PayHere.
+
+The **immediate "order placed" confirmation is the exception** — it is sent inline from `createOrder` (not debounced), because `pending_confirmation` is deliberately excluded from the dispatcher (`eventForStatus` returns `null` for it). Tables for this system come from migrations **009–011** (run them in Supabase before testing notifications).
+
 ## Build Phases
 
-Phases 1–4 are complete. Phases 5–6 are pending. Do not build features from future phases when working on the current one. Each phase has a spec in `docs/PHASE_N.md` and the full spec is in `MASTER_SPEC.md`.
+Phases 1–5 are complete; **Phase 6 is in progress** (Part A — debounced order/receipt notifications — is built; see "Notifications & Crons" above). Do not build features from future phases when working on the current one. Each phase has a spec in `docs/PHASE_N.md` and the full spec is in `MASTER_SPEC.md`.
 
 | Phase | Scope |
 |---|---|
@@ -119,10 +161,10 @@ Phases 1–4 are complete. Phases 5–6 are pending. Do not build features from 
 | 2 ✅ | Products, catalog, search, PDP, wishlist, bulk request form |
 | 3 ✅ | Cart, checkout, PayHere + bank transfer + COD, orders, subscriptions |
 | 4 ✅ | Customer account, order history, loyalty points, reviews, subscription & bulk-request management |
-| 5 | Full admin panel |
-| 6 | Email/WhatsApp notifications, SEO, performance, Vercel deployment |
+| 5 ✅ | Full admin panel — dashboard, all CRUD, orders, bulk quotes, customers, settings, activity logs |
+| 6 🚧 | Email/WhatsApp notifications (Part A done — debounced order/receipt dispatcher), subscription-reminder + review crons, public `/quote/[token]` page, maintenance-mode enforcement, SEO, performance, Vercel deployment |
 
-Two hooks were left ready for Phase 5: `earnLoyaltyForOrder` (call when an admin marks an order `delivered`) and `products.base_price` surfaced as a read-only calculated field.
+Deliberately stubbed in Phase 5, to be wired in Phase 6: the "Send status update via WhatsApp" button (disabled while `isWhatsAppEnabled` is false), bulk-quote + subscription-reminder notifications, the public `/quote/[token]` payment page (admin already generates and stores the token), and storefront enforcement of the `maintenance` setting.
 
 ## Key Conventions
 
@@ -130,7 +172,7 @@ Two hooks were left ready for Phase 5: `earnLoyaltyForOrder` (call when an admin
 - Mutations use Server Actions, not API routes, unless it's a webhook.
 - `components/ui/` — base primitives (Button, Input, Card, etc.)
 - `components/shared/` — layout helpers used across both storefront and admin (BrandLogo, Container, FadeIn, DropletSVG)
-- `components/storefront/` — storefront-specific (Header, Footer, WhatsAppButton); `components/account/` — account-area UI (nav, order/subscription/review/address/wishlist managers, shared `primitives.tsx`)
+- `components/storefront/` — storefront-specific (Header, Footer, WhatsAppButton); `components/account/` — account-area UI (nav, order/subscription/review/address/wishlist managers, shared `primitives.tsx`); `components/admin/` — admin UI, grouped per domain (see "Admin Panel" above)
 - `stores/` — Zustand client-side stores: `cart.ts` (`uggalla-cart`) and `wishlistStore.ts` (`uggalla-wishlist`), both `localStorage`-persisted.
 - The `FadeIn` component (`components/shared/FadeIn.tsx`) wraps Framer Motion and respects `prefers-reduced-motion` globally via CSS in `globals.css`.
 - The Google OAuth button is conditionally rendered based on `isGoogleAuthEnabled` — the login page always works with email/password even when Google is not configured.
@@ -150,6 +192,6 @@ See `components/storefront/WishlistButton.tsx` as the reference. Apply this patt
 
 ## Form Validation Pattern
 
-For any non-trivial form, co-locate a `schema.ts` next to the form and server action files. Export a Zod schema and the inferred type from it; import both in the client form (for live "reward early, punish late" validation) and the server action (as the final authority before touching the DB). See `app/(storefront)/bulk-request/schema.ts` as the reference implementation.
+For any non-trivial **storefront** form, co-locate a `schema.ts` next to the form and server action files. Export a Zod schema and the inferred type from it; import both in the client form (for live "reward early, punish late" validation) and the server action (as the final authority before touching the DB). See `app/(storefront)/bulk-request/schema.ts` as the reference implementation. (The admin panel deviates from co-location: all admin schemas live in the single `lib/admin/schemas.ts` — see "Admin Panel" above.)
 
 The client form should be fully controlled (`useState` per field), track a `touched: Set<string>` for blurred fields and a `submitted: boolean` flag, and derive errors live via `useMemo(() => Schema.safeParse(...))`. Error visibility rule: `(touched.has(field) || submitted) ? errors[field]?.[0] : undefined`.
