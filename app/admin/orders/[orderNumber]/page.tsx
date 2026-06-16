@@ -9,10 +9,11 @@ import { formatCurrency } from "@/lib/brand";
 import { formatDateTime, formatShortDate } from "@/lib/date";
 import {
   ORDER_STATUS_LABEL,
-  PAYMENT_STATUS_LABEL,
-  PAYMENT_METHOD_LABEL,
+  paymentStatusLabel,
+  paymentMethodLabel,
   INTERVAL_LABEL,
   orderStatusVariant,
+  deriveOrderContacts,
 } from "@/lib/orders/status";
 import { Panel } from "@/components/admin/primitives";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,14 @@ export default async function OrderDetailPage({
 
   const waPhone = order.customer_phone?.replace(/[^0-9]/g, "");
   const addr = order.address_snapshot;
+  const contacts = deriveOrderContacts({
+    recipientName: addr?.recipient ?? null,
+    recipientPhone: addr?.phone ?? null,
+    accountName: order.customer_name,
+    accountPhone: order.customer_phone,
+    accountEmail: order.customer_email,
+    hasAccount: !!order.user_id,
+  });
 
   return (
     <div className="space-y-5">
@@ -48,7 +57,10 @@ export default async function OrderDetailPage({
           <h1 className="font-display text-2xl font-bold text-green-deep">{order.order_number}</h1>
           <Badge variant={orderStatusVariant(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge>
           <Badge variant={order.payment_status === "paid" ? "sage" : "secondary"}>
-            {PAYMENT_STATUS_LABEL[order.payment_status] ?? order.payment_status}
+            {paymentStatusLabel({
+              paymentMethod: order.payment_method,
+              paymentStatus: order.payment_status,
+            })}
           </Badge>
           <span className="text-sm text-muted-foreground">{formatDateTime(order.created_at)}</span>
         </div>
@@ -146,6 +158,11 @@ export default async function OrderDetailPage({
               <User className="h-4 w-4" /> Customer
             </h2>
             <p className="font-medium text-green-deep">{order.customer_name ?? "Guest"}</p>
+            {contacts.secondaryContact && contacts.recipientName && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Ordering on behalf of {contacts.recipientName}
+              </p>
+            )}
             <div className="mt-2 space-y-1 text-sm">
               {order.customer_phone && (
                 <div className="flex items-center gap-3">
@@ -184,7 +201,15 @@ export default async function OrderDetailPage({
             <p className="text-sm font-medium capitalize text-green-deep">{order.fulfillment_type}</p>
             {order.fulfillment_type === "delivery" && addr && (
               <div className="mt-1 text-sm text-muted-foreground">
-                <p>{addr.recipient}</p>
+                <p className="font-medium text-green-deep">{addr.recipient}</p>
+                {contacts.recipientPhone && (
+                  <a
+                    href={`tel:${contacts.recipientPhone}`}
+                    className="flex items-center gap-1 text-green hover:underline"
+                  >
+                    <Phone className="h-3.5 w-3.5" /> {contacts.recipientPhone}
+                  </a>
+                )}
                 <p>{[addr.line1, addr.line2, addr.city, addr.postal_code].filter(Boolean).join(", ")}</p>
                 <a
                   href={`https://maps.google.com/?q=${encodeURIComponent(
@@ -207,15 +232,47 @@ export default async function OrderDetailPage({
               {order.delivery_date && <p>Date: {formatShortDate(order.delivery_date)}</p>}
               {order.time_slot && <p>Slot: {order.time_slot.label}</p>}
             </div>
+
+            {contacts.secondaryContact && (
+              <div className="mt-3 rounded-lg border border-sand bg-sand/30 p-2.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Secondary contact
+                </p>
+                <p className="mt-0.5 text-sm font-medium text-green-deep">
+                  {contacts.secondaryContact.name}
+                </p>
+                <div className="space-y-0.5 text-sm">
+                  {contacts.secondaryContact.phone && (
+                    <a
+                      href={`tel:${contacts.secondaryContact.phone}`}
+                      className="flex items-center gap-1 text-green hover:underline"
+                    >
+                      <Phone className="h-3.5 w-3.5" /> {contacts.secondaryContact.phone}
+                    </a>
+                  )}
+                  {contacts.secondaryContact.email && (
+                    <a
+                      href={`mailto:${contacts.secondaryContact.email}`}
+                      className="flex items-center gap-1 text-green hover:underline"
+                    >
+                      <Mail className="h-3.5 w-3.5" /> {contacts.secondaryContact.email}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </Panel>
 
           <Panel>
             <h2 className="mb-3 font-display text-base font-semibold text-green-deep">Payment</h2>
             <p className="text-sm text-green-deep">
-              {PAYMENT_METHOD_LABEL[order.payment_method] ?? order.payment_method}
+              {paymentMethodLabel(order.payment_method, order.fulfillment_type)}
             </p>
             <Badge variant={order.payment_status === "paid" ? "sage" : "secondary"} className="mt-1 text-[10px]">
-              {PAYMENT_STATUS_LABEL[order.payment_status] ?? order.payment_status}
+              {paymentStatusLabel({
+                paymentMethod: order.payment_method,
+                paymentStatus: order.payment_status,
+              })}
             </Badge>
 
             {order.bank_receipt && (

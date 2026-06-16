@@ -251,10 +251,11 @@ export function CheckoutClient(props: CheckoutClientProps) {
     }
   }, [dateStr, refreshSlots]);
 
-  // COD availability.
+  // Cash availability — the same "cash on hand-over" method works for both
+  // delivery (Cash on Delivery) and pickup (Pay at Store); the store's min/max
+  // limits apply to both.
   const codAvailable =
     cod.enabled &&
-    fulfillmentType === "delivery" &&
     (!cod.min_order_amount || total >= cod.min_order_amount) &&
     (!cod.max_order_amount || total <= cod.max_order_amount);
 
@@ -732,15 +733,10 @@ export function CheckoutClient(props: CheckoutClientProps) {
                   <PaymentOption
                     key={p.id}
                     method={p.id}
+                    fulfillmentType={fulfillmentType}
                     active={paymentMethod === p.id}
                     disabled={p.id === "cod" && !codAvailable}
-                    disabledReason={
-                      p.id === "cod"
-                        ? fulfillmentType !== "delivery"
-                          ? "Available for delivery orders only"
-                          : "Not available for this order total"
-                        : undefined
-                    }
+                    disabledReason={p.id === "cod" ? "Not available for this order total" : undefined}
                     onSelect={() => setPaymentMethod(p.id)}
                   />
                 ))}
@@ -758,17 +754,19 @@ export function CheckoutClient(props: CheckoutClientProps) {
           <div className="rounded-2xl border border-sand bg-white p-6 space-y-4">
             <h2 className="font-display text-xl text-green-deep">Order Summary</h2>
 
-            <div className="space-y-3 max-h-64 overflow-y-auto">
+            <div className="space-y-3 max-h-64 overflow-y-auto pt-2">
               {items.map((item) => (
                 <div key={item.cartId} className="flex gap-3">
-                  <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-lg bg-sand">
-                    {item.image ? (
-                      <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <DropletSVG className="h-6 w-6 text-sage" />
-                      </div>
-                    )}
+                  <div className="relative h-14 w-14 flex-shrink-0">
+                    <div className="h-full w-full overflow-hidden rounded-lg bg-sand">
+                      {item.image ? (
+                        <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <DropletSVG className="h-6 w-6 text-sage" />
+                        </div>
+                      )}
+                    </div>
                     <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-green-deep text-white text-[10px] font-bold flex items-center justify-center">
                       {item.quantity}
                     </span>
@@ -931,7 +929,7 @@ function DateSlotPicker({
       <div>
         <Label className="flex items-center gap-2 mb-2">
           <Clock className="h-4 w-4 text-green" />
-          Time Slot
+          {pickup ? "Pickup Time" : "Time Slot"}
         </Label>
         {!date ? (
           <p className="text-sm text-muted-foreground">Choose a date to see available slots.</p>
@@ -975,12 +973,14 @@ function DateSlotPicker({
 
 function PaymentOption({
   method,
+  fulfillmentType,
   active,
   disabled,
   disabledReason,
   onSelect,
 }: {
   method: PaymentMethod;
+  fulfillmentType: "delivery" | "pickup";
   active: boolean;
   disabled?: boolean;
   disabledReason?: string;
@@ -999,12 +999,20 @@ function PaymentOption({
       desc: "Upload your receipt after placing the order",
       recommended: false,
     },
-    cod: {
-      icon: Wallet,
-      title: "Cash on Delivery",
-      desc: "Pay in cash when your order arrives",
-      recommended: false,
-    },
+    cod:
+      fulfillmentType === "pickup"
+        ? {
+            icon: Wallet,
+            title: "Pay at Store",
+            desc: "Pay in cash when you collect your order",
+            recommended: false,
+          }
+        : {
+            icon: Wallet,
+            title: "Cash on Delivery",
+            desc: "Pay in cash when your order arrives",
+            recommended: false,
+          },
   }[method];
   const Icon = config.icon;
 

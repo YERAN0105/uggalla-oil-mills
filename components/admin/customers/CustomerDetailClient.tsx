@@ -288,14 +288,14 @@ export function CustomerDetailClient({ customer }: { customer: CustomerDetail })
             ) : (
               <ul className="divide-y divide-sand">
                 {c.loyaltyTx.map((t) => (
-                  <li key={t.id} className="flex items-center justify-between py-2 text-sm">
+                  <li key={t.id} className="grid grid-cols-[100px_1fr_80px_160px] items-center gap-4 py-2 text-sm">
                     <span className="capitalize text-green-deep">{t.type}</span>
-                    <span className="text-muted-foreground">{t.note}</span>
-                    <span className={`font-medium ${t.points >= 0 ? "text-green" : "text-red-600"}`}>
+                    <span className="text-muted-foreground truncate">{t.note}</span>
+                    <span className={`font-medium text-right ${t.points >= 0 ? "text-green" : "text-red-600"}`}>
                       {t.points >= 0 ? "+" : ""}
                       {t.points}
                     </span>
-                    <span className="text-xs text-muted-foreground">{formatDateTime(t.created_at)}</span>
+                    <span className="text-xs text-muted-foreground text-right">{formatDateTime(t.created_at)}</span>
                   </li>
                 ))}
               </ul>

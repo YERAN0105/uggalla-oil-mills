@@ -15,7 +15,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { approveBankTransfer, rejectBankTransfer } from "@/lib/admin/orders";
+import { approveBankTransfer, rejectBankTransfer, revertBankTransfer } from "@/lib/admin/orders";
+import { ConfirmDialog } from "@/components/admin/primitives";
 
 export function BankReceiptReview({
   receipt,
@@ -30,14 +31,31 @@ export function BankReceiptReview({
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [approveOpen, setApproveOpen] = useState(false);
+  const [revertOpen, setRevertOpen] = useState(false);
   const [reason, setReason] = useState("");
+  // Local status so the buttons swap instantly; server data syncs on refresh.
+  const [status, setStatus] = useState(receipt.status);
 
   const approve = async () => {
     setPending(true);
     const res = await approveBankTransfer(receipt.id);
     setPending(false);
+    setApproveOpen(false);
     if (!res.ok) return toast.error(res.error);
+    setStatus("approved");
     toast.success("Payment approved.");
+    router.refresh();
+  };
+
+  const revert = async () => {
+    setPending(true);
+    const res = await revertBankTransfer(receipt.id);
+    setPending(false);
+    setRevertOpen(false);
+    if (!res.ok) return toast.error(res.error);
+    setStatus("pending");
+    toast.success("Reopened for review.");
     router.refresh();
   };
 
@@ -48,6 +66,7 @@ export function BankReceiptReview({
     setPending(false);
     if (!res.ok) return toast.error(res.error);
     setRejectOpen(false);
+    setStatus("rejected");
     toast.success("Receipt rejected.");
     router.refresh();
   };
@@ -58,11 +77,11 @@ export function BankReceiptReview({
         <span className="text-sm font-medium text-green-deep">Bank transfer receipt</span>
         <Badge
           variant={
-            receipt.status === "approved" ? "sage" : receipt.status === "rejected" ? "destructive" : "secondary"
+            status === "approved" ? "sage" : status === "rejected" ? "destructive" : "secondary"
           }
           className="text-[10px]"
         >
-          {receipt.status}
+          {status}
         </Badge>
       </div>
 
@@ -75,15 +94,15 @@ export function BankReceiptReview({
         </div>
       </a>
 
-      {receipt.reject_reason && (
+      {status === "rejected" && receipt.reject_reason && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
           Rejected: {receipt.reject_reason}
         </p>
       )}
 
-      {receipt.status === "pending" && (
+      {status === "pending" ? (
         <div className="flex gap-2">
-          <Button onClick={approve} disabled={pending} className="flex-1 gap-2">
+          <Button onClick={() => setApproveOpen(true)} disabled={pending} className="flex-1 gap-2">
             {pending && <Loader2 className="h-4 w-4 animate-spin" />}
             Approve
           </Button>
@@ -96,7 +115,38 @@ export function BankReceiptReview({
             Reject
           </Button>
         </div>
+      ) : (
+        <Button
+          variant="outline"
+          onClick={() => setRevertOpen(true)}
+          disabled={pending}
+          className="w-full gap-2"
+        >
+          Reopen for review
+        </Button>
       )}
+
+      <ConfirmDialog
+        open={approveOpen}
+        onOpenChange={setApproveOpen}
+        title="Approve this bank transfer?"
+        description="This marks the order as paid and confirms it. You can reopen it for review afterwards if needed."
+        confirmLabel="Approve payment"
+        destructive={false}
+        loading={pending}
+        onConfirm={approve}
+      />
+
+      <ConfirmDialog
+        open={revertOpen}
+        onOpenChange={setRevertOpen}
+        title="Reopen this receipt for review?"
+        description="This will undo the current decision and return the receipt to pending status."
+        confirmLabel="Reopen for review"
+        destructive={false}
+        loading={pending}
+        onConfirm={revert}
+      />
 
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <DialogContent className="max-w-md">
