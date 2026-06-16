@@ -3,6 +3,28 @@ import type { AddressSnapshot, OrderItemRow } from "@/types/checkout";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+/**
+ * Turn a stored bank-receipt `image_url` into a short-lived signed URL.
+ * Receipts are saved as a bare storage path (e.g. `UOM-…/123.jpeg`) in the
+ * private `payment-receipts` bucket; older rows may hold a full URL. Returns a
+ * usable URL in both cases (falls back to the stored value if signing fails).
+ */
+async function signReceiptUrl(
+  db: ReturnType<typeof createAdminClient>,
+  imageUrl: string
+): Promise<string> {
+  const path = imageUrl.includes("/payment-receipts/")
+    ? imageUrl.split("/payment-receipts/")[1]
+    : imageUrl;
+  if (!path) return imageUrl;
+  try {
+    const { data } = await db.storage.from("payment-receipts").createSignedUrl(path, 60 * 60);
+    return data?.signedUrl ?? imageUrl;
+  } catch {
+    return imageUrl;
+  }
+}
+
 export interface AdminOrderListRow {
   id: string;
   order_number: string;
@@ -136,13 +158,14 @@ export async function listOrders(
 
 export async function getOrderDetail(orderNumber: string): Promise<AdminOrderDetail | null> {
   const db = createAdminClient();
-  const { data: o } = await db
+  const { data: o, error } = await db
     .from("orders")
     .select(
-      "*, user:users(name, phone), delivery_zone:delivery_zones(name, fee), time_slot:time_slots(label), coupon:coupons(code), order_items(*), order_status_history(*), bank_transfer_receipts(*), payments(*)"
+      "*, user:users(name, phone), delivery_zone:delivery_zones(name, fee), time_slot:time_slots(label), coupon:coupons!orders_coupon_id_fkey(code), order_items(*), order_status_history(*), bank_transfer_receipts(*), payments(*)"
     )
     .eq("order_number", orderNumber)
     .maybeSingle();
+  if (error) console.error("[getOrderDetail] query failed:", error.message);
   if (!o) return null;
   const row = o as any;
 
@@ -154,24 +177,17 @@ export async function getOrderDetail(orderNumber: string): Promise<AdminOrderDet
   }
 
   // Receipt: signed URL (private bucket).
+  // Prefer the newest pending receipt (customer re-upload after rejection);
+  // fall back to the most-recently uploaded receipt overall.
   let receipt = null as AdminOrderDetail["bank_receipt"];
-  const rec = (row.bank_transfer_receipts ?? [])[0];
+  const allReceipts = ((row.bank_transfer_receipts ?? []) as any[]).sort(
+    (a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
+  );
+  const rec = allReceipts.find((r) => r.status === "pending") ?? allReceipts[0];
   if (rec) {
-    let signed = rec.image_url as string;
-    try {
-      const path = rec.image_url.split("/payment-receipts/")[1];
-      if (path) {
-        const { data: s } = await db.storage
-          .from("payment-receipts")
-          .createSignedUrl(path, 60 * 60);
-        if (s?.signedUrl) signed = s.signedUrl;
-      }
-    } catch {
-      /* fall back to stored url */
-    }
     receipt = {
       id: rec.id,
-      image_url: signed,
+      image_url: await signReceiptUrl(db, rec.image_url),
       status: rec.status,
       reject_reason: rec.reject_reason,
       uploaded_at: rec.uploaded_at,
@@ -272,18 +288,7 @@ export async function getPendingBankTransfers(): Promise<
   const rows = [];
   for (const r of (data as any[]) ?? []) {
     if (!r.order) continue;
-    let signed = r.image_url as string;
-    try {
-      const path = r.image_url.split("/payment-receipts/")[1];
-      if (path) {
-        const { data: s } = await db.storage
-          .from("payment-receipts")
-          .createSignedUrl(path, 60 * 60);
-        if (s?.signedUrl) signed = s.signedUrl;
-      }
-    } catch {
-      /* keep stored url */
-    }
+    const signed = await signReceiptUrl(db, r.image_url);
     rows.push({
       receipt_id: r.id,
       order_id: r.order.id,

@@ -12,6 +12,14 @@ interface BankReceiptUploadProps {
   orderNumber: string;
   token: string;
   alreadyUploaded?: boolean;
+  /**
+   * When false, the component skips its own full "Receipt received" card on a
+   * successful upload and shows a slim "finalizing" line instead. Use this on
+   * pages that render their own canonical receipt-received state after the
+   * `router.refresh()` re-render (e.g. the account order page), so the customer
+   * doesn't briefly see two stacked success cards. Defaults to true.
+   */
+  showSuccessCard?: boolean;
   /** Called after a successful upload so the parent can refresh the order status. */
   onUploaded?: () => void;
 }
@@ -23,6 +31,7 @@ export function BankReceiptUpload({
   orderNumber,
   token,
   alreadyUploaded,
+  showSuccessCard = true,
   onUploaded,
 }: BankReceiptUploadProps) {
   const router = useRouter();
@@ -68,6 +77,16 @@ export function BankReceiptUpload({
   };
 
   if (done) {
+    // The parent renders its own canonical "receipt received" state after the
+    // refresh — show only a slim finalizing line to avoid two stacked cards.
+    if (!showSuccessCard) {
+      return (
+        <div className="flex items-center gap-2 rounded-xl border border-green/30 bg-green/5 p-3 text-sm text-green-deep">
+          <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-green" />
+          <span>Receipt uploaded — updating your order…</span>
+        </div>
+      );
+    }
     return (
       <div className="flex items-center gap-3 rounded-xl border border-green/30 bg-green/5 p-4 text-sm">
         <CheckCircle2 className="h-5 w-5 text-green flex-shrink-0" />

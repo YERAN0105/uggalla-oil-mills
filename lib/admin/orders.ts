@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin/guard";
 import { logActivity } from "@/lib/admin/activity";
 import { earnLoyaltyForOrder, reverseLoyaltyForOrder } from "@/lib/loyalty/engine";
+import { enqueueOrderNotification, enqueueReceiptNotification } from "@/lib/notifications/pending";
 import type { ActionResult } from "@/types/admin";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -84,6 +85,9 @@ export async function updateOrderStatus(
   if ((status === "cancelled" || status === "refunded") && prevStatus === "delivered") {
     await reverseLoyaltyForOrder(orderId);
   }
+
+  // Buffer the customer notification (debounced + forward-only; dispatched later).
+  await enqueueOrderNotification(orderId, status);
 
   await logActivity(admin.id, {
     action: "order.status_change",
@@ -229,6 +233,9 @@ export async function cancelOrderAdmin(orderId: string, reason: string): Promise
   // Remove coupon usage so the coupon can be reused.
   await db.from("coupon_usage").delete().eq("order_id", orderId);
 
+  // Buffer the cancellation notification (terminal — notified once).
+  await enqueueOrderNotification(orderId, "cancelled");
+
   await logActivity(admin.id, {
     action: "order.cancelled",
     targetTable: "orders",
@@ -265,6 +272,9 @@ export async function refundOrder(orderId: string, reason: string): Promise<Acti
     changed_by: admin.id,
   });
   await reverseLoyaltyForOrder(orderId);
+
+  // Buffer the refund notification (terminal — notified once).
+  await enqueueOrderNotification(orderId, "refunded");
 
   await logActivity(admin.id, {
     action: "order.refunded",
@@ -311,6 +321,10 @@ export async function approveBankTransfer(receiptId: string): Promise<ActionResu
       changed_by: admin.id,
     });
   }
+
+  // Buffer the receipt-approved notification (debounced; the receipt track also
+  // serves as the order's confirmation email, so we don't enqueue "confirmed").
+  await enqueueReceiptNotification(orderId, "approved", receiptId);
 
   await logActivity(admin.id, {
     action: "payment.bank_approved",
@@ -392,6 +406,72 @@ export async function exportOrdersCsv(filters: {
   return { ok: true, data: { csv: lines.join("\n") } };
 }
 
+/**
+ * Undo a bank-transfer decision (e.g. an accidental approve/reject): reopens the
+ * receipt for review, reverts `payment_status` to `pending_transfer` if it was
+ * marked paid here, and rolls the order back to `pending_confirmation` if the
+ * approval had auto-advanced it to `confirmed`. Logged for the audit trail.
+ */
+export async function revertBankTransfer(receiptId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const db = createAdminClient();
+
+  const { data: receipt } = await db
+    .from("bank_transfer_receipts")
+    .select("id, order_id, status")
+    .eq("id", receiptId)
+    .maybeSingle();
+  if (!receipt) return { ok: false, error: "Receipt not found." };
+  if ((receipt as any).status === "pending")
+    return { ok: false, error: "This receipt is already awaiting review." };
+
+  const orderId = (receipt as any).order_id as string;
+  const { data: order } = await db
+    .from("orders")
+    .select("order_number, status, payment_status, payment_method")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  await db
+    .from("bank_transfer_receipts")
+    .update({ status: "pending", reviewed_by: null, reviewed_at: null, reject_reason: null })
+    .eq("id", receiptId);
+
+  const orderUpdate: Record<string, unknown> = {};
+  if ((order as any)?.payment_method === "bank_transfer" && (order as any)?.payment_status === "paid") {
+    orderUpdate.payment_status = "pending_transfer";
+  }
+  let statusReverted = false;
+  if ((order as any)?.status === "confirmed") {
+    orderUpdate.status = "pending_confirmation";
+    statusReverted = true;
+  }
+  if (Object.keys(orderUpdate).length > 0) {
+    await db.from("orders").update(orderUpdate).eq("id", orderId);
+    if (statusReverted) {
+      await db.from("order_status_history").insert({
+        order_id: orderId,
+        status: "pending_confirmation",
+        note: "Bank transfer reopened for review",
+        changed_by: admin.id,
+      });
+    }
+  }
+
+  // Undo of a bank decision: overwrite any pending receipt email with a "reverted"
+  // no-op, so an approve/reject-then-undo within the window sends nothing.
+  await enqueueReceiptNotification(orderId, "reverted", receiptId);
+
+  await logActivity(admin.id, {
+    action: "payment.bank_reverted",
+    targetTable: "orders",
+    targetId: orderId,
+    metadata: { order_number: (order as any)?.order_number },
+  });
+  revalidateOrders((order as any)?.order_number);
+  return { ok: true };
+}
+
 /** Reject a bank-transfer receipt with a reason; customer can re-upload. */
 export async function rejectBankTransfer(
   receiptId: string,
@@ -424,6 +504,11 @@ export async function rejectBankTransfer(
     .select("order_number")
     .eq("id", orderId)
     .maybeSingle();
+
+  // Buffer the receipt-rejected notification (debounced; carries the reason +
+  // re-upload link). Sends a correction-with-apology only if the customer was
+  // already told THIS receipt was approved.
+  await enqueueReceiptNotification(orderId, "rejected", receiptId);
 
   await logActivity(admin.id, {
     action: "payment.bank_rejected",

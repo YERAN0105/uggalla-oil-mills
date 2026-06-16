@@ -20,7 +20,7 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
 const PAYMENT_STATUS_LABEL: Record<string, string> = {
   pending: "Awaiting payment",
   pending_transfer: "Awaiting bank transfer",
-  cod: "Pending — pay on delivery",
+  cod: "Awaiting payment",
   paid: "Paid",
   rejected: "Payment rejected",
   refunded: "Refunded",
@@ -31,6 +31,11 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
   bank_transfer: "Bank Transfer",
   cod: "Cash on Delivery",
 };
+
+function paymentMethodLabel(method: string, fulfillmentType: string): string {
+  if (method === "cod" && fulfillmentType === "pickup") return "Pay at Store";
+  return PAYMENT_METHOD_LABEL[method] ?? method;
+}
 
 const INTERVAL_LABEL: Record<string, string> = {
   weekly: "weekly",
@@ -45,6 +50,7 @@ const INTERVAL_LABEL: Record<string, string> = {
  * The DB `payment_status` stays the source of truth (admin approval → paid).
  */
 function paymentStatusLabel(order: OrderWithItems): string {
+  if (order.status === "cancelled" && order.payment_status === "pending_transfer") return "Not paid";
   if (order.payment_method === "bank_transfer" && order.payment_status === "pending_transfer") {
     if (order.bank_receipt?.status === "rejected") return "Receipt rejected — please re-upload";
     if (order.bank_receipt) return "Payment under review";
@@ -153,7 +159,7 @@ export function OrderDetailView({ order }: { order: OrderWithItems }) {
         <div className="rounded-2xl border border-sand bg-white p-5">
           <p className="text-sm font-semibold text-green-deep mb-2">Payment</p>
           <p className="text-sm text-muted-foreground">
-            {PAYMENT_METHOD_LABEL[order.payment_method] ?? order.payment_method}
+            {paymentMethodLabel(order.payment_method, order.fulfillment_type)}
           </p>
           <p className="text-sm text-muted-foreground">{paymentStatusLabel(order)}</p>
         </div>

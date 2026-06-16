@@ -143,5 +143,7 @@ export interface OrderWithItems extends OrderRow {
   order_items: OrderItemRow[];
   delivery_zone: Pick<DeliveryZone, "id" | "name" | "fee" | "estimated_time"> | null;
   time_slot: Pick<TimeSlot, "id" | "label"> | null;
+  /** Status timeline entries (for the progress bar), earliest first. */
+  history: { status: string; note: string | null; changed_at: string }[];
   bank_receipt: { id: string; status: string } | null;
 }

@@ -16,10 +16,12 @@ export function StatusTimeline({ status, fulfillmentType, history }: Props) {
   const currentIndex = statusStepIndex(status);
   const isCancelled = status === "cancelled" || status === "refunded";
 
-  // First timestamp recorded for each status key.
+  // Latest timestamp recorded for each status key. History is oldest-first, so a
+  // plain overwrite leaves the most recent occurrence — correct when a status was
+  // reverted and re-reached (we want the new time, not the original stale one).
   const reachedAt = new Map<string, string>();
   for (const h of history) {
-    if (!reachedAt.has(h.status)) reachedAt.set(h.status, h.changed_at);
+    reachedAt.set(h.status, h.changed_at);
   }
 
   if (isCancelled) {
@@ -87,7 +89,9 @@ export function StatusTimeline({ status, fulfillmentType, history }: Props) {
                 <p className={cn("text-sm font-medium", reached ? "text-green-deep" : "text-muted-foreground")}>
                   {step.label}
                 </p>
-                {ts && <p className="text-xs text-muted-foreground">{formatDateTime(ts)}</p>}
+                {/* Only show the timestamp for steps currently reached, so a
+                    reverted (unchecked) step never shows a stale time. */}
+                {reached && ts && <p className="text-xs text-muted-foreground">{formatDateTime(ts)}</p>}
               </div>
             </li>
           );

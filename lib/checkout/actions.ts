@@ -8,6 +8,7 @@ import { isPayHereEnabled } from "@/lib/integrations";
 import { formatInColombo } from "@/lib/date";
 import { brand } from "@/lib/brand";
 import { signOrderToken } from "@/lib/orders/token";
+import { notify } from "@/lib/notifications";
 import { getCodLimits, getTaxSettings, getLoyaltySettings } from "@/lib/settings";
 import { evaluateCoupon, type CouponLine } from "@/lib/checkout/coupon";
 import { createOrderSchema, type CreateOrderInput } from "@/lib/checkout/schema";
@@ -334,16 +335,16 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
     return { ok: false, error: "Online payment is currently unavailable. Please choose another method." };
   }
   if (data.paymentMethod === "cod") {
-    if (data.fulfillmentType !== "delivery") {
-      return { ok: false, error: "Cash on Delivery is only available for delivery orders." };
-    }
+    // "cod" is cash on hand-over — Cash on Delivery for delivery orders, Pay at
+    // Store for pickup. The same enabled flag + min/max limits gate both.
+    const cashLabel = data.fulfillmentType === "pickup" ? "Pay at Store" : "Cash on Delivery";
     const cod = await getCodLimits();
-    if (!cod.enabled) return { ok: false, error: "Cash on Delivery is currently unavailable." };
+    if (!cod.enabled) return { ok: false, error: `${cashLabel} is currently unavailable.` };
     if (cod.min_order_amount && total < cod.min_order_amount) {
-      return { ok: false, error: `Cash on Delivery requires a minimum of Rs. ${cod.min_order_amount.toLocaleString()}.` };
+      return { ok: false, error: `${cashLabel} requires a minimum of Rs. ${cod.min_order_amount.toLocaleString()}.` };
     }
     if (cod.max_order_amount && total > cod.max_order_amount) {
-      return { ok: false, error: `Cash on Delivery is not available for orders over Rs. ${cod.max_order_amount.toLocaleString()}.` };
+      return { ok: false, error: `${cashLabel} is not available for orders over Rs. ${cod.max_order_amount.toLocaleString()}.` };
     }
   }
 
@@ -483,9 +484,39 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
     }
   }
 
-  // TODO Phase 6: notify('order_placed', { orderId: order.id })
-
   const token = signOrderToken(orderNumber);
+
+  // Immediate order-placed confirmation — first touch, NOT debounced. Best-effort:
+  // a failed email must never fail the order. (pending_confirmation is excluded
+  // from the debounced dispatcher, so this is the only "order placed" email.)
+  try {
+    const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    await notify("order_placed", {
+      orderNumber,
+      status: "pending_confirmation",
+      email: data.contactEmail ?? null,
+      phone: data.contactPhone ?? null,
+      recipientName: addressSnapshot?.recipient ?? null,
+      items: resolved.map((l) => ({
+        name: l.snapshot?.name ?? "Item",
+        sizeLabel: l.size?.label ?? null,
+        quantity: l.quantity,
+        lineTotal: l.lineTotal,
+      })),
+      subtotal,
+      deliveryFee,
+      discount: discountAmount,
+      loyaltyDiscount,
+      tax: taxAmount,
+      total,
+      fulfillmentType: data.fulfillmentType,
+      deliveryDate: data.fulfillmentDate ?? null,
+      viewOrderUrl: `${base}/orders/${encodeURIComponent(orderNumber)}?t=${token}`,
+    });
+  } catch (err) {
+    console.error("[createOrder] order-placed notify failed:", err);
+  }
+
   const redirectUrl =
     data.paymentMethod === "payhere"
       ? `/checkout/pay/${orderNumber}`
