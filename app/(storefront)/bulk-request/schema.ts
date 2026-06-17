@@ -19,28 +19,45 @@ export const BulkRequestSchema = z
       .max(100000, "Quantity is too large"),
     unit: z.enum(["litres", "cans", "kg", "other"]),
     fulfillment_type: z.enum(["delivery", "pickup"]),
+    // Delivery address — either a saved address id (logged-in users) or the
+    // new-address fields below. Ownership of a saved id is verified server-side.
+    savedAddressId: z.string().uuid().nullish(),
+    address_recipient: z.string().optional(),
+    address_phone: z
+      .string()
+      .optional()
+      .refine((v) => !v || phoneRegex.test(v), "Enter a valid phone number"),
     address_line1: z.string().optional(),
+    address_line2: z.string().optional(),
     address_city: z.string().optional(),
     preferred_date: z.string().optional(),
     notes: z.string().max(1000, "Notes must be under 1000 characters").optional(),
   })
-  // Address + city are required only for delivery.
+  // Address fields are required only when delivering with a *new* address.
+  // A saved-address selection needs no field validation (server resolves it).
   .superRefine((data, ctx) => {
-    if (data.fulfillment_type === "delivery") {
-      if (!data.address_line1?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["address_line1"],
-          message: "Delivery address is required",
-        });
-      }
-      if (!data.address_city?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["address_city"],
-          message: "City / town is required",
-        });
-      }
+    if (data.fulfillment_type !== "delivery") return;
+    if (data.savedAddressId) return;
+    if (!data.address_recipient || data.address_recipient.trim().length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["address_recipient"],
+        message: "Recipient name is required",
+      });
+    }
+    if (!data.address_line1?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["address_line1"],
+        message: "Delivery address is required",
+      });
+    }
+    if (!data.address_city?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["address_city"],
+        message: "City / town is required",
+      });
     }
   });
 

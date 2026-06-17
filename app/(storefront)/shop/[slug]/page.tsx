@@ -9,19 +9,26 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Button } from "@/components/ui/button";
 import { ProductGallery } from "@/components/storefront/ProductGallery";
 import { ProductOptions } from "@/components/storefront/ProductOptions";
-import { ReviewsSection } from "@/components/storefront/ReviewsSection";
+import { ReviewsSection, type ProductReview } from "@/components/storefront/ReviewsSection";
 import { RelatedProducts } from "@/components/storefront/RelatedProducts";
 import { StickyBottomBar } from "@/components/storefront/StickyBottomBar";
 import { WishlistButton } from "@/components/storefront/WishlistButton";
 import { StarRating } from "@/components/storefront/StarRating";
 import { getProduct, getRelatedProducts, getMinPrice } from "@/lib/products";
 import { formatCurrency, brand } from "@/lib/brand";
-import { createClient } from "@/lib/supabase/server";
-import type { Review } from "@/types/supabase";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Tag } from "lucide-react";
 
 interface PDPProps {
   params: Promise<{ slug: string }>;
+}
+
+/** Public reviewer display name: first name + last initial (e.g. "Nuwandini R."). */
+function formatAuthor(name: string | null | undefined): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "Verified Customer";
+  if (parts.length === 1) return parts[0];
+  return `${parts[0]} ${parts[parts.length - 1][0].toUpperCase()}.`;
 }
 
 export async function generateMetadata({ params }: PDPProps): Promise<Metadata> {
@@ -55,19 +62,31 @@ export default async function ProductDetailPage({ params }: PDPProps) {
   const product = await getProduct(slug);
   if (!product) notFound();
 
-  // Fetch reviews and related products in parallel
-  const supabase = await createClient();
+  // Fetch reviews and related products in parallel. Reviews go through the
+  // service-role client so the author-name join (public.users) and review
+  // photos resolve despite RLS — only approved rows + safe fields are read.
+  const admin = createAdminClient();
   const [reviewsResult, relatedProducts] = await Promise.all([
-    supabase
+    admin
       .from("reviews")
-      .select("*")
+      .select("id, rating, title, body, admin_reply, created_at, users:user_id(name), review_images(url)")
       .eq("product_id", product.id)
       .eq("status", "approved")
       .order("created_at", { ascending: false }),
     getRelatedProducts(product.id, product.categories.id),
   ]);
 
-  const reviews = (reviewsResult.data ?? []) as Review[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const reviews: ProductReview[] = ((reviewsResult.data ?? []) as any[]).map((r) => ({
+    id: r.id,
+    rating: r.rating,
+    title: r.title,
+    body: r.body,
+    admin_reply: r.admin_reply,
+    created_at: r.created_at,
+    authorName: formatAuthor(r.users?.name),
+    images: (r.review_images ?? []).map((img: { url: string }) => img.url),
+  }));
   const avgRating =
     reviews.length > 0
       ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length

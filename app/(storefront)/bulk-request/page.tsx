@@ -3,6 +3,7 @@ import { Container } from "@/components/shared/Container";
 import { FadeIn } from "@/components/shared/FadeIn";
 import { BulkRequestForm } from "./BulkRequestForm";
 import { getProducts } from "@/lib/products";
+import { getCheckoutUser } from "@/lib/checkout/data";
 import { brand } from "@/lib/brand";
 import { Phone, Mail, MapPin } from "lucide-react";
 
@@ -18,8 +19,11 @@ interface BulkRequestPageProps {
 export default async function BulkRequestPage({ searchParams }: BulkRequestPageProps) {
   const sp = await searchParams;
 
-  // Fetch bulk products for the selector
-  const { products: bulkProducts } = await getProducts({ purchaseType: "bulk_quote" });
+  // Fetch bulk products for the selector + the logged-in user's saved addresses
+  const [{ products: bulkProducts }, { user, addresses }] = await Promise.all([
+    getProducts({ purchaseType: "bulk_quote" }),
+    getCheckoutUser(),
+  ]);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -52,6 +56,8 @@ export default async function BulkRequestPage({ searchParams }: BulkRequestPageP
                 <BulkRequestForm
                   products={bulkProducts}
                   preselectedProductId={sp.product}
+                  user={user}
+                  addresses={addresses}
                 />
               </div>
             </FadeIn>

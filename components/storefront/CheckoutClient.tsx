@@ -493,11 +493,16 @@ export function CheckoutClient(props: CheckoutClientProps) {
                           }}
                           className="mt-1 accent-green"
                         />
-                        <div className="text-sm">
-                          <p className="font-semibold text-green-deep">
-                            {a.recipient}
-                            {a.label && <span className="text-muted-foreground font-normal"> · {a.label}</span>}
-                          </p>
+                        <div className="min-w-0 flex-1 text-sm">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className="font-semibold text-green-deep">
+                              {a.recipient}
+                              {a.label && <span className="text-muted-foreground font-normal"> · {a.label}</span>}
+                            </p>
+                            {a.phone && (
+                              <span className="shrink-0 text-xs text-muted-foreground">{a.phone}</span>
+                            )}
+                          </div>
                           <p className="text-muted-foreground">
                             {[a.line1, a.line2, a.city, a.postal_code].filter(Boolean).join(", ")}
                           </p>
