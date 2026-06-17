@@ -1,9 +1,21 @@
-import { Star } from "lucide-react";
-import type { Review } from "@/types/supabase";
+import { Star, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ReviewPhotos } from "./ReviewPhotos";
+
+/** A single approved review, enriched for public display on the PDP. */
+export interface ProductReview {
+  id: string;
+  rating: number;
+  title: string | null;
+  body: string | null;
+  admin_reply: string | null;
+  created_at: string;
+  authorName: string;
+  images: string[];
+}
 
 interface ReviewsSectionProps {
-  reviews: Review[];
+  reviews: ProductReview[];
   avgRating?: number | null;
 }
 
@@ -22,7 +34,8 @@ function StarBar({ rating, count, total }: { rating: number; count: number; tota
 }
 
 export function ReviewsSection({ reviews, avgRating }: ReviewsSectionProps) {
-  const approved = reviews.filter((r) => r.status === "approved");
+  // Reviews arrive already filtered to `approved` from the PDP query.
+  const approved = reviews;
 
   if (approved.length === 0) {
     return (
@@ -78,23 +91,15 @@ export function ReviewsSection({ reviews, avgRating }: ReviewsSectionProps) {
       {/* Reviews list */}
       <div className="space-y-5">
         {approved.map((review) => (
-          <div key={review.id} className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex gap-0.5">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star
-                    key={s}
-                    className={cn(
-                      "h-3.5 w-3.5",
-                      s <= review.rating ? "fill-gold text-gold" : "fill-sand text-sand"
-                    )}
-                  />
-                ))}
-              </div>
-              {review.title && (
-                <span className="text-sm font-semibold text-green-deep">{review.title}</span>
-              )}
-              <span className="text-xs text-muted-foreground ml-auto">
+          <div key={review.id} className="space-y-1.5">
+            {/* Author + verified + date */}
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="font-medium text-green-deep">{review.authorName}</span>
+              <span className="inline-flex items-center gap-0.5 text-green">
+                <BadgeCheck className="h-3.5 w-3.5" />
+                Verified Purchase
+              </span>
+              <span className="ml-auto text-muted-foreground">
                 {new Date(review.created_at).toLocaleDateString("en-LK", {
                   year: "numeric",
                   month: "short",
@@ -102,9 +107,26 @@ export function ReviewsSection({ reviews, avgRating }: ReviewsSectionProps) {
                 })}
               </span>
             </div>
+            {/* Stars */}
+            <div className="flex gap-0.5">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Star
+                  key={s}
+                  className={cn(
+                    "h-3.5 w-3.5",
+                    s <= review.rating ? "fill-gold text-gold" : "fill-sand text-sand"
+                  )}
+                />
+              ))}
+            </div>
+            {/* Verdict */}
+            {review.title && (
+              <p className="text-sm font-semibold text-green-deep">{review.title}</p>
+            )}
             {review.body && (
               <p className="text-sm text-green-deep/80 leading-relaxed">{review.body}</p>
             )}
+            <ReviewPhotos images={review.images} authorName={review.authorName} />
             {review.admin_reply && (
               <div className="ml-4 pl-3 border-l-2 border-green/20">
                 <p className="text-xs font-semibold text-green mb-0.5">Uggalla Oil Mills</p>

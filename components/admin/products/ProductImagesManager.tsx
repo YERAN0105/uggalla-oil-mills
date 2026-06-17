@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { UploadCloud, Loader2, Star, Trash2 } from "lucide-react";
@@ -28,6 +28,9 @@ export function ProductImagesManager({
 }) {
   const router = useRouter();
   const [list, setList] = useState(images);
+  // Keep local state in sync with fresh server data after router.refresh()
+  // (uploads/deletes), since useState only seeds `list` on first mount.
+  useEffect(() => setList(images), [images]);
   const [uploading, setUploading] = useState(false);
   const [drag, setDrag] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);

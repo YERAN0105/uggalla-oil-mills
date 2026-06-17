@@ -419,7 +419,12 @@ export function ProductForm({
         <Panel>
           <h2 className="mb-4 font-display text-lg font-semibold text-green-deep">Images</h2>
           {isEdit ? (
-            <ProductImagesManager productId={product!.id} images={product!.images} />
+            <>
+              <p className="mb-4 text-xs text-muted-foreground">
+                Images save immediately — they don&apos;t wait for Save &amp; Publish.
+              </p>
+              <ProductImagesManager productId={product!.id} images={product!.images} />
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">
               Save the product first, then upload and arrange images.

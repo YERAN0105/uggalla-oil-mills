@@ -11,11 +11,14 @@ import { FadeIn } from "@/components/shared/FadeIn";
 import { submitBulkRequest } from "./actions";
 import { BulkRequestSchema } from "./schema";
 import type { ProductWithRelations } from "@/types/supabase";
+import type { CheckoutUser, SavedAddress } from "@/types/checkout";
 import { cn } from "@/lib/utils";
 
 interface BulkRequestFormProps {
   products: ProductWithRelations[];
   preselectedProductId?: string;
+  user: CheckoutUser | null;
+  addresses: SavedAddress[];
 }
 
 type Values = {
@@ -25,8 +28,6 @@ type Values = {
   quantity: string;
   unit: string;
   fulfillment_type: "delivery" | "pickup";
-  address_line1: string;
-  address_city: string;
   preferred_date: string;
   notes: string;
 };
@@ -39,20 +40,75 @@ function FieldError({ message }: { message?: string }) {
   return <p className="text-xs text-destructive mt-1">{message}</p>;
 }
 
-export function BulkRequestForm({ products, preselectedProductId }: BulkRequestFormProps) {
+/** Reduce a stored phone (+94…, 0…, or raw) to its 9 local digits for the input. */
+function toLocalDigits(phone: string | null): string {
+  if (!phone) return "";
+  return phone.replace(/\D/g, "").slice(-9);
+}
+
+function PhonePrefixInput({
+  id,
+  value,
+  onChange,
+  onBlur,
+  disabled,
+  invalid,
+}: {
+  id: string;
+  value: string;
+  onChange: (digits: string) => void;
+  onBlur?: () => void;
+  disabled?: boolean;
+  invalid?: boolean;
+}) {
+  return (
+    <div className="flex">
+      <span className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground select-none">
+        +94
+      </span>
+      <Input
+        id={id}
+        type="tel"
+        inputMode="numeric"
+        placeholder="771234567"
+        maxLength={9}
+        autoComplete="tel-national"
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, ""))}
+        onBlur={onBlur}
+        aria-invalid={invalid ? true : undefined}
+        className={cn("rounded-l-none", invalid && "border-destructive")}
+      />
+    </div>
+  );
+}
+
+export function BulkRequestForm({
+  products,
+  preselectedProductId,
+  user,
+  addresses,
+}: BulkRequestFormProps) {
   const [values, setValues] = useState<Values>({
-    name: "",
-    email: "",
+    name: user?.name ?? "",
+    email: user?.email ?? "",
     product_id: preselectedProductId ?? "",
     quantity: "",
     unit: "litres",
     fulfillment_type: "delivery",
-    address_line1: "",
-    address_city: "",
     preferred_date: "",
     notes: "",
   });
-  const [phoneDigits, setPhoneDigits] = useState("");
+  const [phoneDigits, setPhoneDigits] = useState(toLocalDigits(user?.phone ?? null));
+
+  // Address state — mirrors the checkout flow.
+  const initialAddress = addresses.find((a) => a.is_default) ?? addresses[0];
+  const [savedAddressId, setSavedAddressId] = useState<string | null>(initialAddress?.id ?? null);
+  const [useNewAddress, setUseNewAddress] = useState(addresses.length === 0);
+  const [addr, setAddr] = useState({ recipient: user?.name ?? "", line1: "", line2: "", city: "" });
+  const [addrPhoneDigits, setAddrPhoneDigits] = useState("");
+
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,10 +116,34 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
   const [successId, setSuccessId] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  // The phone field is entered as 9 digits and combined with +94 for validation.
+  // Logged-in contact details come from the account and are shown locked.
+  const nameLocked = !!user && !!user.name;
+  const emailLocked = !!user;
+  const phoneLocked = !!user && !!user.phone;
+
+  const isDelivery = values.fulfillment_type === "delivery";
+  const usingSaved = isDelivery && !useNewAddress && !!savedAddressId;
+
+  // The phone fields are entered as 9 digits and combined with +94 for validation.
   const formValues = useMemo(
-    () => ({ ...values, phone: phoneDigits ? `+94${phoneDigits}` : "" }),
-    [values, phoneDigits]
+    () => ({
+      name: values.name,
+      email: values.email,
+      phone: phoneDigits ? `+94${phoneDigits}` : "",
+      product_id: values.product_id,
+      quantity: values.quantity,
+      unit: values.unit,
+      fulfillment_type: values.fulfillment_type,
+      savedAddressId: usingSaved ? savedAddressId : null,
+      address_recipient: isDelivery && useNewAddress ? addr.recipient : "",
+      address_phone: isDelivery && useNewAddress && addrPhoneDigits ? `+94${addrPhoneDigits}` : "",
+      address_line1: isDelivery && useNewAddress ? addr.line1 : "",
+      address_line2: isDelivery && useNewAddress ? addr.line2 : "",
+      address_city: isDelivery && useNewAddress ? addr.city : "",
+      preferred_date: values.preferred_date,
+      notes: values.notes,
+    }),
+    [values, phoneDigits, savedAddressId, useNewAddress, addr, addrPhoneDigits, isDelivery, usingSaved]
   );
 
   // Live validation with the SAME schema the server uses.
@@ -146,8 +226,6 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
     );
   }
 
-  const isDelivery = values.fulfillment_type === "delivery";
-
   return (
     <form ref={formRef} onSubmit={handleSubmit} className="space-y-6" noValidate>
       {serverError && (
@@ -162,6 +240,15 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
           Your Contact Details
         </legend>
 
+        {user && (
+          <p className="text-xs text-muted-foreground -mt-1">
+            From your account.{" "}
+            <Link href="/account/profile" className="underline hover:text-green transition-colors">
+              Update your details
+            </Link>
+          </p>
+        )}
+
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <Label htmlFor="name">Full Name *</Label>
@@ -170,6 +257,7 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
               placeholder="e.g. Nimal Perera"
               autoComplete="name"
               value={values.name}
+              disabled={nameLocked}
               onChange={(e) => setField("name", e.target.value)}
               onBlur={() => markTouched("name")}
               aria-invalid={showError("name") ? true : undefined}
@@ -180,26 +268,16 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
 
           <div className="space-y-1">
             <Label htmlFor="phone">Phone *</Label>
-            <div className="flex">
-              <span className="flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-sm text-muted-foreground select-none">
-                +94
-              </span>
-              <Input
-                id="phone"
-                type="tel"
-                inputMode="numeric"
-                placeholder="771234567"
-                maxLength={9}
-                autoComplete="tel-national"
-                value={phoneDigits}
-                onChange={(e) => setPhoneDigits(e.target.value.replace(/\D/g, ""))}
-                onBlur={() => markTouched("phone")}
-                aria-invalid={showError("phone") ? true : undefined}
-                className={cn("rounded-l-none", showError("phone") && "border-destructive")}
-              />
-            </div>
+            <PhonePrefixInput
+              id="phone"
+              value={phoneDigits}
+              disabled={phoneLocked}
+              onChange={setPhoneDigits}
+              onBlur={() => markTouched("phone")}
+              invalid={!!showError("phone")}
+            />
             <FieldError message={showError("phone")} />
-            {!showError("phone") && (
+            {!showError("phone") && !phoneLocked && (
               <p className="text-xs text-muted-foreground">Enter 9 digits after +94, e.g. 771234567</p>
             )}
           </div>
@@ -213,6 +291,7 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
             placeholder="you@example.com"
             autoComplete="email"
             value={values.email}
+            disabled={emailLocked}
             onChange={(e) => setField("email", e.target.value)}
             onBlur={() => markTouched("email")}
             aria-invalid={showError("email") ? true : undefined}
@@ -317,32 +396,126 @@ export function BulkRequestForm({ products, preselectedProductId }: BulkRequestF
 
         {isDelivery && (
           <div className="space-y-3">
-            <div className="space-y-1">
-              <Label htmlFor="address_line1">Delivery Address *</Label>
-              <Input
-                id="address_line1"
-                placeholder="Street address, area"
-                value={values.address_line1}
-                onChange={(e) => setField("address_line1", e.target.value)}
-                onBlur={() => markTouched("address_line1")}
-                aria-invalid={showError("address_line1") ? true : undefined}
-                className={cn(showError("address_line1") && "border-destructive")}
-              />
-              <FieldError message={showError("address_line1")} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="address_city">City / Town *</Label>
-              <Input
-                id="address_city"
-                placeholder="e.g. Colombo, Kandy"
-                value={values.address_city}
-                onChange={(e) => setField("address_city", e.target.value)}
-                onBlur={() => markTouched("address_city")}
-                aria-invalid={showError("address_city") ? true : undefined}
-                className={cn(showError("address_city") && "border-destructive")}
-              />
-              <FieldError message={showError("address_city")} />
-            </div>
+            {/* Saved addresses (logged-in users) */}
+            {user && addresses.length > 0 && (
+              <div className="space-y-2">
+                {addresses.map((a) => (
+                  <label
+                    key={a.id}
+                    className={cn(
+                      "flex items-start gap-3 rounded-xl border p-3 cursor-pointer transition-colors",
+                      !useNewAddress && savedAddressId === a.id
+                        ? "border-green bg-green/5"
+                        : "border-sand hover:border-green/40"
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="bulk-address"
+                      checked={!useNewAddress && savedAddressId === a.id}
+                      onChange={() => {
+                        setUseNewAddress(false);
+                        setSavedAddressId(a.id);
+                      }}
+                      className="mt-1 accent-green"
+                    />
+                    <div className="min-w-0 flex-1 text-sm">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="font-semibold text-green-deep">
+                          {a.recipient}
+                          {a.label && (
+                            <span className="text-muted-foreground font-normal"> · {a.label}</span>
+                          )}
+                        </p>
+                        {a.phone && (
+                          <span className="shrink-0 text-xs text-muted-foreground">{a.phone}</span>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground">
+                        {[a.line1, a.line2, a.city, a.postal_code].filter(Boolean).join(", ")}
+                      </p>
+                    </div>
+                  </label>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setUseNewAddress(true)}
+                  className={cn(
+                    "w-full rounded-xl border p-3 text-sm font-medium transition-colors",
+                    useNewAddress
+                      ? "border-green bg-green/5 text-green"
+                      : "border-dashed border-sand text-muted-foreground hover:border-green/40"
+                  )}
+                >
+                  + Add a new address
+                </button>
+              </div>
+            )}
+
+            {/* New address fields */}
+            {useNewAddress && (
+              <div className="space-y-3">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="a-recipient">Recipient Name *</Label>
+                    <Input
+                      id="a-recipient"
+                      value={addr.recipient}
+                      onChange={(e) => setAddr({ ...addr, recipient: e.target.value })}
+                      onBlur={() => markTouched("address_recipient")}
+                      aria-invalid={showError("address_recipient") ? true : undefined}
+                      className={cn(showError("address_recipient") && "border-destructive")}
+                    />
+                    <FieldError message={showError("address_recipient")} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="a-phone">Recipient Phone (optional)</Label>
+                    <PhonePrefixInput
+                      id="a-phone"
+                      value={addrPhoneDigits}
+                      onChange={setAddrPhoneDigits}
+                      onBlur={() => markTouched("address_phone")}
+                      invalid={!!showError("address_phone")}
+                    />
+                    <FieldError message={showError("address_phone")} />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="a-line1">Delivery Address *</Label>
+                  <Input
+                    id="a-line1"
+                    placeholder="Street address, area"
+                    value={addr.line1}
+                    onChange={(e) => setAddr({ ...addr, line1: e.target.value })}
+                    onBlur={() => markTouched("address_line1")}
+                    aria-invalid={showError("address_line1") ? true : undefined}
+                    className={cn(showError("address_line1") && "border-destructive")}
+                  />
+                  <FieldError message={showError("address_line1")} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="a-line2">Address Line 2 (optional)</Label>
+                  <Input
+                    id="a-line2"
+                    value={addr.line2}
+                    onChange={(e) => setAddr({ ...addr, line2: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="a-city">City / Town *</Label>
+                  <Input
+                    id="a-city"
+                    placeholder="e.g. Colombo, Kandy"
+                    value={addr.city}
+                    onChange={(e) => setAddr({ ...addr, city: e.target.value })}
+                    onBlur={() => markTouched("address_city")}
+                    aria-invalid={showError("address_city") ? true : undefined}
+                    className={cn(showError("address_city") && "border-destructive")}
+                  />
+                  <FieldError message={showError("address_city")} />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </fieldset>
