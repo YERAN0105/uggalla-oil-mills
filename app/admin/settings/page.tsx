@@ -25,8 +25,8 @@ export default async function SettingsPage() {
     getBankDetails(),
     getCodLimits(),
     getSetting<NotificationSettings>("notifications", {
-      email_enabled: false,
-      whatsapp_enabled: false,
+      email_enabled: true,
+      whatsapp_enabled: true,
       events: {},
     }),
     getSetting<SeoSettings>("seo", { site_title: "", meta_description: "", og_image_url: "" }),

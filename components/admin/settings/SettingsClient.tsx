@@ -21,6 +21,7 @@ import {
   saveSeo,
   saveMaintenance,
 } from "@/lib/admin/settings-actions";
+import { NOTIFICATION_EVENTS } from "@/lib/notifications/catalog";
 import type {
   SubscriptionFrequencies,
   NotificationSettings,
@@ -311,26 +312,86 @@ function PaymentTab({
 
 function NotificationsTab({ notifications }: { notifications: NotificationSettings }) {
   const { saving, run } = useSaver();
-  const [n, setN] = useState(notifications);
+  const [n, setN] = useState<NotificationSettings>({
+    email_enabled: notifications.email_enabled,
+    whatsapp_enabled: notifications.whatsapp_enabled,
+    events: notifications.events ?? {},
+  });
+
+  // events map is opt-out: undefined/true = enabled.
+  const eventOn = (key: string) => n.events?.[key] !== false;
+  const setEvent = (key: string, v: boolean) =>
+    setN((s) => ({ ...s, events: { ...s.events, [key]: v } }));
+
+  const transactional = NOTIFICATION_EVENTS.filter((e) => e.group === "transactional");
+  const orderStatus = NOTIFICATION_EVENTS.filter((e) => e.group === "order_status");
+
   return (
-    <Panel>
-      <p className="mb-3 rounded-lg bg-gold/15 px-3 py-2 text-xs text-green-deep">
-        Notification sending is wired in Phase 6. These toggles are saved now and take effect then.
-      </p>
-      <div className="space-y-3">
-        <Toggle
-          label="Email notifications (Resend)"
-          checked={n.email_enabled}
-          onChange={(v) => setN((s) => ({ ...s, email_enabled: v }))}
-        />
-        <Toggle
-          label="WhatsApp notifications (Cloud API)"
-          checked={n.whatsapp_enabled}
-          onChange={(v) => setN((s) => ({ ...s, whatsapp_enabled: v }))}
-        />
-      </div>
-      <SaveButton saving={saving} onClick={() => run(() => saveNotifications(n))} />
-    </Panel>
+    <div className="space-y-5">
+      <Panel>
+        <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">Channels</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Master switches per channel. A channel also requires its integration to be configured
+          (Resend for email, WhatsApp Cloud API keys for WhatsApp) — otherwise sends are skipped.
+        </p>
+        <div className="space-y-3">
+          <Toggle
+            label="Email notifications (Resend)"
+            checked={n.email_enabled}
+            onChange={(v) => setN((s) => ({ ...s, email_enabled: v }))}
+          />
+          <Toggle
+            label="WhatsApp notifications (Cloud API)"
+            checked={n.whatsapp_enabled}
+            onChange={(v) => setN((s) => ({ ...s, whatsapp_enabled: v }))}
+          />
+        </div>
+        <SaveButton saving={saving} onClick={() => run(() => saveNotifications(n))} />
+      </Panel>
+
+      <Panel>
+        <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">Per-event</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Turn individual customer notifications on or off. Order-status &amp; payment emails are
+          debounced and always follow the master Email switch above.
+        </p>
+        <div className="space-y-4">
+          {transactional.map((e) => (
+            <div key={e.key} className="flex items-start justify-between gap-4 border-b border-border pb-3 last:border-0 last:pb-0">
+              <div>
+                <p className="text-sm font-medium text-green-deep">{e.label}</p>
+                <p className="text-xs text-muted-foreground">{e.description}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  WhatsApp template: <code className="rounded bg-sand px-1">{e.whatsappTemplate}</code> ·
+                  variables: {e.whatsappVars.map((v) => `{{${v}}}`).join(", ")}
+                </p>
+              </div>
+              <Switch checked={eventOn(e.key)} onCheckedChange={(v) => setEvent(e.key, v)} />
+            </div>
+          ))}
+        </div>
+        <SaveButton saving={saving} onClick={() => run(() => saveNotifications(n))} />
+      </Panel>
+
+      <Panel>
+        <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">WhatsApp templates (reference)</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          These templates are immutable — create and get them approved in the Meta WhatsApp Manager
+          (see docs/WHATSAPP_SETUP.md). Variable order must match.
+        </p>
+        <div className="space-y-2">
+          {orderStatus.map((e) => (
+            <div key={e.key} className="rounded-lg bg-sand/60 px-3 py-2">
+              <p className="text-sm font-medium text-green-deep">{e.label}</p>
+              <p className="text-[11px] text-muted-foreground">
+                <code className="rounded bg-white px-1">{e.whatsappTemplate}</code> ·
+                {" "}variables: {e.whatsappVars.map((v) => `{{${v}}}`).join(", ")}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Panel>
+    </div>
   );
 }
 

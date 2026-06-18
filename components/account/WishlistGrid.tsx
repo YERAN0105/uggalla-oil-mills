@@ -128,7 +128,9 @@ export function WishlistGrid({ products, unavailable }: Props) {
                     {product.brands.name}
                   </span>
                 )}
-                <span className="text-[10px] text-muted-foreground">{product.categories.name}</span>
+                {product.categories && (
+                  <span className="text-[10px] text-muted-foreground">{product.categories.name}</span>
+                )}
               </div>
               <Link href={`/shop/${product.slug}`} className="hover:text-green">
                 <h3 className="line-clamp-2 font-display text-sm font-semibold leading-snug text-green-deep">

@@ -6,14 +6,7 @@ import { BrandLogo } from "@/components/shared/BrandLogo";
 import { Container } from "@/components/shared/Container";
 import { brand } from "@/lib/brand";
 import { DropletSVG } from "@/components/shared/DropletSVG";
-
-const quickLinks = [
-  { href: "/shop", label: "Shop" },
-  { href: "/shop?category=bottles", label: "Bottles" },
-  { href: "/shop?category=packets", label: "Packets" },
-  { href: "/bulk-request", label: "Bulk Orders" },
-  { href: "/about", label: "About Us" },
-];
+import type { NavCategory } from "@/components/storefront/Header";
 
 const supportLinks = [
   { href: "/faq", label: "FAQ" },
@@ -23,7 +16,15 @@ const supportLinks = [
   { href: "/privacy", label: "Privacy Policy" },
 ];
 
-export function Footer() {
+export function Footer({ categories }: { categories: NavCategory[] }) {
+  // Category links are data-driven so hidden categories drop out of the footer too.
+  const quickLinks = [
+    { href: "/shop", label: "Shop" },
+    ...categories.map((c) => ({ href: `/shop?category=${c.slug}`, label: c.name })),
+    { href: "/bulk-request", label: "Bulk Orders" },
+    { href: "/about", label: "About Us" },
+  ];
+
   return (
     <footer className="bg-green-deep text-white/80" aria-label="Site footer">
       {/* Newsletter band */}

@@ -70,6 +70,22 @@ export async function sendQuote(
   if (!(input.total > 0)) return { ok: false, error: "Enter a quote total greater than zero." };
 
   const db = createAdminClient();
+
+  // Once a request has become a real order, the quote is settled — block re-quoting
+  // (a price change at that point is an order-level change, not a new quote).
+  const { data: existing } = await db
+    .from("bulk_requests")
+    .select("converted_order_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!existing) return { ok: false, error: "Request not found." };
+  if ((existing as { converted_order_id: string | null }).converted_order_id) {
+    return {
+      ok: false,
+      error: "This request has already been converted to an order — manage the order instead of re-quoting.",
+    };
+  }
+
   const update: Record<string, unknown> = {
     quoted_unit_price: input.unitPrice ?? null,
     quoted_total: input.total,
@@ -102,7 +118,37 @@ export async function sendQuote(
     metadata: { total: input.total, payment_mode: update.payment_mode },
   });
   revalidate(id);
-  // TODO (Phase 6): fire email + WhatsApp notifications with the quote/link.
+
+  // Notify the customer with the quote (email + WhatsApp). The pay-online link is
+  // included only for online quotes. Fire-and-forget — never fail the quote send.
+  try {
+    const { data: br } = await db
+      .from("bulk_requests")
+      .select("name, email, phone, quantity, unit, product_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (br) {
+      const row = br as any;
+      const productName = row.product_id
+        ? (await db.from("products").select("name").eq("id", row.product_id).maybeSingle()).data?.name ?? null
+        : null;
+      const { sendBulkQuoteSent } = await import("@/lib/notifications/transactional");
+      await sendBulkQuoteSent({
+        name: row.name ?? null,
+        email: row.email ?? null,
+        phone: row.phone ?? null,
+        productName,
+        quantity: Number(row.quantity ?? 0),
+        unit: row.unit ?? "L",
+        quotedTotal: input.total,
+        message: input.message || null,
+        payLink: quoteLink,
+      });
+    }
+  } catch (err) {
+    console.error("[sendQuote] notification failed:", err);
+  }
+
   return { ok: true, data: { quoteLink } };
 }
 
@@ -112,12 +158,36 @@ function generateOrderNumber(): string {
   return `UOM-${stamp}-${rand}`;
 }
 
+/** Offline payment methods an admin can assign when converting a bulk request. */
+const CONVERT_METHODS = ["cod", "bank_transfer"] as const;
+export type ConvertPaymentMethod = (typeof CONVERT_METHODS)[number];
+
 /**
- * Convert an accepted bulk request into a tracked order with a single custom
- * bulk line item. Payment status is recorded manually by the admin afterwards.
+ * Convert an accepted bulk request into a tracked order — created the SAME way a
+ * normal checkout order is, so it flows through all the shared payment/status/
+ * notification logic and the various order views stay consistent.
+ *
+ * The admin picks the offline payment method:
+ *   - "cod"           → pay on hand-over (shown as "Cash on Delivery" for delivery
+ *                       orders, "Pay at Store" for pickup — by the shared label).
+ *   - "bank_transfer" → awaiting bank transfer, same handling as a normal order.
+ *
+ * Like checkout, the order starts at `pending_confirmation`, payment_status is set
+ * the same way checkout sets it, and an "order placed" email is sent inline. The
+ * admin then advances it through the normal timeline (confirmed → … → delivered),
+ * with those notifications going out via the normal debounced dispatcher.
+ *
+ * The bulk request moves to `accepted` (an order now exists for it); it only
+ * becomes `completed` once that order is marked delivered (see updateOrderStatus).
  */
-export async function convertBulkToOrder(id: string): Promise<ActionResult<{ orderNumber: string }>> {
+export async function convertBulkToOrder(
+  id: string,
+  paymentMethod: ConvertPaymentMethod = "cod"
+): Promise<ActionResult<{ orderNumber: string }>> {
   const admin = await requireAdmin();
+  if (!CONVERT_METHODS.includes(paymentMethod)) {
+    return { ok: false, error: "Invalid payment method." };
+  }
   const db = createAdminClient();
 
   const { data: br } = await db.from("bulk_requests").select("*").eq("id", id).maybeSingle();
@@ -133,6 +203,35 @@ export async function convertBulkToOrder(id: string): Promise<ActionResult<{ ord
 
   const orderNumber = generateOrderNumber();
   const total = Number(row.quoted_total) || 0;
+  const fulfillmentType = row.fulfillment_type === "pickup" ? "pickup" : "delivery";
+  // Same payment_status mapping checkout uses for these methods.
+  const paymentStatus = paymentMethod === "cod" ? "cod" : "pending_transfer";
+
+  // Snapshot the quote message + internal note onto the order's admin-only notes,
+  // taken at conversion. (The customer note goes to `notes` below.) After this, the
+  // order is the live place for notes; the bulk request's note is frozen.
+  //
+  // The order's notes card stores one note per line as "[time] author: text". The
+  // bulk request's internal notes are ALREADY in that format, so we carry them over
+  // as-is (each stays its own clean bullet). The quote message is free-form, so we
+  // add it as a single labelled line in the same format (newlines flattened).
+  const flatten = (s: string) => s.replace(/\s*\n+\s*/g, " ").trim();
+  const stamp = new Date().toISOString();
+  // All authored "Bulk request" so the order's notes card renders them in a
+  // visually distinct, clearly-labelled group, separate from notes added later.
+  const parts: string[] = [];
+  if (row.quote_message)
+    parts.push(`[${stamp}] Bulk request: Quote message to customer — ${flatten(row.quote_message)}`);
+  // The bulk internal notes are stored one "[time] author: text" per line. Carry
+  // EACH note over as its own line → its own inner card, so multiple notes stay
+  // clearly separated (never merged onto one line).
+  if (row.internal_notes) {
+    for (const line of String(row.internal_notes).split("\n")) {
+      const text = line.replace(/^\[[^\]]+\]\s*[^:]+:\s*/, "").trim();
+      if (text) parts.push(`[${stamp}] Bulk request: Internal note — ${text}`);
+    }
+  }
+  const internalNotesSnapshot = parts.length ? parts.join("\n") : null;
 
   const { data: order, error: orderErr } = await db
     .from("orders")
@@ -141,12 +240,12 @@ export async function convertBulkToOrder(id: string): Promise<ActionResult<{ ord
       user_id: row.user_id,
       guest_email: row.user_id ? null : row.email,
       guest_phone: row.user_id ? null : row.phone,
-      status: "confirmed",
-      fulfillment_type: row.fulfillment_type,
+      status: "pending_confirmation",
+      fulfillment_type: fulfillmentType,
       address_snapshot: row.address_snapshot,
       delivery_date: row.preferred_date,
-      payment_method: row.payment_mode === "online" ? "payhere" : "bank_transfer",
-      payment_status: "pending",
+      payment_method: paymentMethod,
+      payment_status: paymentStatus,
       subtotal: total,
       delivery_fee: 0,
       discount_amount: 0,
@@ -154,6 +253,7 @@ export async function convertBulkToOrder(id: string): Promise<ActionResult<{ ord
       total,
       source: "bulk_conversion",
       notes: row.notes,
+      internal_notes: internalNotesSnapshot,
     })
     .select("id, order_number")
     .single();
@@ -182,26 +282,27 @@ export async function convertBulkToOrder(id: string): Promise<ActionResult<{ ord
 
   await db.from("order_status_history").insert({
     order_id: (order as any).id,
-    status: "confirmed",
-    note: "Created from bulk request",
+    status: "pending_confirmation",
+    note: "Order placed (from bulk request)",
     changed_by: admin.id,
   });
 
+  // An order now exists for this request — mark it accepted (NOT completed). It
+  // becomes completed when that order is delivered (see updateOrderStatus).
   await db
     .from("bulk_requests")
-    .update({ converted_order_id: (order as any).id, status: "completed" })
+    .update({ converted_order_id: (order as any).id, status: "accepted" })
     .eq("id", id);
 
-  // This order is created already-confirmed (not a fat-finger-prone transition),
-  // so it gets an IMMEDIATE confirmation — it does NOT go through the debounce
-  // buffer. Record the send in the ledger so the debounced dispatcher will never
-  // re-send "confirmed" for this order. Best-effort; never blocks the conversion.
+  // Immediate "order placed" email — exactly like checkout. pending_confirmation
+  // is excluded from the debounced dispatcher, so this is the only first-touch
+  // email; later status changes notify via the normal debounced flow. Best-effort.
   try {
     const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
     const viewOrderUrl = `${base}/orders/${encodeURIComponent(orderNumber)}?t=${signOrderToken(orderNumber)}`;
-    const results = await notify("order_confirmed", {
+    await notify("order_placed", {
       orderNumber,
-      status: "confirmed",
+      status: "pending_confirmation",
       email: row.email ?? null,
       phone: row.phone ?? null,
       recipientName: row.name ?? null,
@@ -212,30 +313,19 @@ export async function convertBulkToOrder(id: string): Promise<ActionResult<{ ord
       loyaltyDiscount: 0,
       tax: 0,
       total,
-      fulfillmentType: row.fulfillment_type === "pickup" ? "pickup" : "delivery",
+      fulfillmentType,
       deliveryDate: row.preferred_date ?? null,
       viewOrderUrl,
     });
-    const sentChannels = results.filter((r) => r.status === "sent");
-    if (sentChannels.length > 0) {
-      await db.from("order_notification_ledger").upsert(
-        sentChannels.map((r) => ({
-          order_id: (order as any).id,
-          status: "confirmed",
-          channel: r.channel,
-        })),
-        { onConflict: "order_id,status,channel", ignoreDuplicates: true }
-      );
-    }
   } catch (err) {
-    console.error("[convertBulkToOrder] confirmation notify failed:", err);
+    console.error("[convertBulkToOrder] order-placed notify failed:", err);
   }
 
   await logActivity(admin.id, {
     action: "bulk.converted",
     targetTable: "bulk_requests",
     targetId: id,
-    metadata: { order_number: orderNumber },
+    metadata: { order_number: orderNumber, payment_method: paymentMethod },
   });
   revalidate(id);
   revalidatePath("/admin/orders");

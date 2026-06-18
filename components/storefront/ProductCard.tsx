@@ -93,9 +93,11 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
               {product.brands.name}
             </span>
           )}
-          <span className="text-[10px] text-muted-foreground">
-            {product.categories.name}
-          </span>
+          {product.categories && (
+            <span className="text-[10px] text-muted-foreground">
+              {product.categories.name}
+            </span>
+          )}
         </div>
 
         {/* Name */}

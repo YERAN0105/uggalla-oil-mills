@@ -23,24 +23,9 @@ type NavLink = {
   dropdown?: { href: string; label: string }[];
 };
 
-const navLinks: NavLink[] = [
-  { href: "/", label: "Home" },
-  {
-    href: "/shop",
-    label: "Shop",
-    dropdown: [
-      { href: "/shop", label: "All Products" },
-      { href: "/shop/category/bottles", label: "Bottles" },
-      { href: "/shop/category/packets", label: "Packets" },
-      { href: "/shop/category/bulk", label: "Bulk / Wholesale" },
-    ],
-  },
-  { href: "/bulk-request", label: "Bulk Orders" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
-];
+export type NavCategory = { name: string; slug: string };
 
-export function Header() {
+export function Header({ categories }: { categories: NavCategory[] }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -56,6 +41,26 @@ export function Header() {
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // Shop dropdown is data-driven from active categories (hidden ones are filtered
+  // out upstream by getCategories), so the menu always matches what the store shows.
+  const navLinks: NavLink[] = [
+    { href: "/", label: "Home" },
+    {
+      href: "/shop",
+      label: "Shop",
+      dropdown: [
+        { href: "/shop", label: "All Products" },
+        ...categories.map((c) => ({
+          href: `/shop/category/${c.slug}`,
+          label: c.name,
+        })),
+      ],
+    },
+    { href: "/bulk-request", label: "Bulk Orders" },
+    { href: "/about", label: "About" },
+    { href: "/contact", label: "Contact" },
+  ];
 
   return (
     <>

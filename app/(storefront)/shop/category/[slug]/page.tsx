@@ -11,6 +11,7 @@ import { ProductGridSkeleton } from "@/components/storefront/ProductSkeleton";
 import { SortSelect } from "@/components/storefront/SortSelect";
 import { Pagination } from "@/components/storefront/Pagination";
 import { MobileFilterDrawer } from "@/components/storefront/MobileFilterDrawer";
+import { JsonLd } from "@/components/shared/JsonLd";
 import {
   getProducts,
   getCategories,
@@ -82,8 +83,20 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     pageSize: PAGE_SIZE,
   });
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${appUrl}/` },
+      { "@type": "ListItem", position: 2, name: "Shop", item: `${appUrl}/shop` },
+      { "@type": "ListItem", position: 3, name: category.name, item: `${appUrl}/shop/category/${slug}` },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-cream">
+      <JsonLd data={breadcrumbLd} />
       {/* Category hero */}
       <div className="relative bg-green-deep text-white overflow-hidden">
         {category.image_url && (

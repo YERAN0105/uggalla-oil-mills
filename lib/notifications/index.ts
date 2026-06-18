@@ -17,7 +17,7 @@ import { brand, formatCurrency } from "@/lib/brand";
 import type { OrderStatus } from "@/lib/orders/status";
 import { OrderStatusEmail, type OrderEmailItem } from "@/emails/OrderStatusEmail";
 import { sendEmail } from "./email";
-import { sendWhatsApp } from "./whatsapp";
+import { sendWhatsAppTemplate } from "./whatsapp";
 
 /**
  * Notification events implemented in Part A. `order_placed` is the immediate
@@ -75,6 +75,8 @@ export interface OrderNotificationPayload {
   total: number;
   fulfillmentType: "delivery" | "pickup";
   deliveryDate: string | null;
+  /** Time-slot label (delivery/pickup window) — used by the WhatsApp templates. */
+  slotLabel?: string | null;
   /** Universal tokenized "View Order" link (works logged-out via the order token). */
   viewOrderUrl: string;
   /** Optional context, e.g. a cancellation/refund or receipt-reject reason. */
@@ -154,6 +156,57 @@ function plainText(content: { heading: string; message: string }, p: OrderNotifi
   return lines.join("\n");
 }
 
+/** Coerce a value into a non-empty, single-line WhatsApp template variable. */
+function waText(s: string | null | undefined, fallback: string): string {
+  const v = (s ?? "").replace(/\s+/g, " ").trim();
+  return v || fallback;
+}
+
+/**
+ * Map an order-status event to its approved WhatsApp template + body variables.
+ * Business-initiated WhatsApp messages must use approved templates (free-form text
+ * isn't delivered), so each event sends its template. Returns null when there's no
+ * template for the event (→ WhatsApp skipped, email still sent).
+ */
+function whatsAppForEvent(
+  event: OrderStatusEvent,
+  p: OrderNotificationPayload
+): { templateName: string; bodyParams: string[] } | null {
+  const name = waText(p.recipientName, "there");
+  const orderNo = p.orderNumber;
+  const total = formatCurrency(Number(p.total));
+  const date = waText(p.deliveryDate, "soon");
+  // Delivery/pickup window = date + time-slot label.
+  const window = waText([p.deliveryDate, p.slotLabel].filter(Boolean).join(", "), "shortly");
+  // Reason for cancel/reject — strip any "Reason: " prefix the dispatcher added.
+  const reason = waText((p.note ?? "").replace(/^reason:\s*/i, ""), "Please contact us for details.");
+
+  switch (event) {
+    case "order_placed":
+      return { templateName: "order_confirmation", bodyParams: [name, orderNo, total, date] };
+    case "order_confirmed":
+      return { templateName: "order_confirmed", bodyParams: [name, orderNo] };
+    case "order_in_preparation":
+      return { templateName: "order_preparation", bodyParams: [name, orderNo] };
+    case "out_for_delivery":
+      return { templateName: "out_for_delivery", bodyParams: [name, orderNo, window] };
+    case "ready_for_pickup":
+      return { templateName: "ready_for_pickup", bodyParams: [name, orderNo, window] };
+    case "order_delivered":
+      return { templateName: "order_delivered", bodyParams: [name, orderNo] };
+    case "order_cancelled":
+      return { templateName: "order_cancelled", bodyParams: [name, orderNo, reason] };
+    case "order_refunded":
+      return { templateName: "order_refunded", bodyParams: [name, orderNo] };
+    case "bank_receipt_approved":
+      return { templateName: "payment_received", bodyParams: [name, orderNo] };
+    case "bank_receipt_rejected":
+      return { templateName: "bank_receipt_rejected", bodyParams: [name, orderNo, reason] };
+    default:
+      return null;
+  }
+}
+
 /**
  * Send an order-status notification across all channels. Fire-and-forget at the
  * channel level (Promise.allSettled); returns a result per channel so the caller
@@ -206,11 +259,18 @@ export async function notify(
     })()
   );
 
-  // WhatsApp (stub until Phase 6)
+  // WhatsApp — approved template per event (free-form text isn't delivered for
+  // business-initiated messages). Gated by isWhatsAppEnabled inside the sender.
   tasks.push(
     (async (): Promise<NotifyChannelResult> => {
       if (!payload.phone) return { channel: "whatsapp", status: "skipped", error: "No phone on file" };
-      const r = await sendWhatsApp({ to: payload.phone, body: text });
+      const tmpl = whatsAppForEvent(event, payload);
+      if (!tmpl) return { channel: "whatsapp", status: "skipped", error: "No WhatsApp template for event" };
+      const r = await sendWhatsAppTemplate({
+        to: payload.phone,
+        templateName: tmpl.templateName,
+        bodyParams: tmpl.bodyParams,
+      });
       if (r.ok) return { channel: "whatsapp", status: "sent" };
       return { channel: "whatsapp", status: r.skipped ? "skipped" : "failed", error: r.error };
     })()

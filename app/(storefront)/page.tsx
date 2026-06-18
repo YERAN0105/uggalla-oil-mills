@@ -19,7 +19,9 @@ import { FadeIn } from "@/components/shared/FadeIn";
 import { DropletSVG } from "@/components/shared/DropletSVG";
 import { NewsletterForm } from "@/components/storefront/NewsletterForm";
 import { ProductCard } from "@/components/storefront/ProductCard";
+import { JsonLd } from "@/components/shared/JsonLd";
 import { getProducts } from "@/lib/products";
+import { brand } from "@/lib/brand";
 
 const categories = [
   {
@@ -117,8 +119,22 @@ export default async function HomePage() {
     const fallback = await getProducts({ pageSize: 4 });
     featuredProducts = fallback.products;
   }
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const websiteLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: brand.name,
+    url: appUrl,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: { "@type": "EntryPoint", urlTemplate: `${appUrl}/shop?q={search_term_string}` },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
   return (
     <>
+      <JsonLd data={websiteLd} />
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-green-deep" aria-label="Hero">
         {/* Background image */}

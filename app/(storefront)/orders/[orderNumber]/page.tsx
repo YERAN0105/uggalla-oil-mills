@@ -86,6 +86,7 @@ export default async function OrderViewPage({ params, searchParams }: PageProps)
               status={order.status}
               fulfillmentType={order.fulfillment_type}
               history={order.history}
+              placedAt={order.created_at}
             />
           </div>
 

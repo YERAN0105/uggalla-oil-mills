@@ -91,8 +91,31 @@ export async function submitBulkRequest(input: unknown): Promise<BulkRequestForm
       return { status: "error", message: "Failed to submit your request. Please try again." };
     }
 
-    // TODO Phase 6: stub notification call
-    // await notify('bulk_request_received', { requestId: insertedRow.id, ... });
+    // Customer acknowledgement + admin alert (email + WhatsApp). Fire-and-forget:
+    // a notification failure must never fail the request submission.
+    try {
+      let productName: string | null = null;
+      if (data.product_id) {
+        const { data: prod } = await admin
+          .from("products")
+          .select("name")
+          .eq("id", data.product_id)
+          .maybeSingle();
+        productName = prod?.name ?? null;
+      }
+      const { sendBulkRequestReceived } = await import("@/lib/notifications/transactional");
+      await sendBulkRequestReceived({
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        productName,
+        quantity: data.quantity,
+        unit: data.unit,
+        requestId: insertedRow.id,
+      });
+    } catch (err) {
+      console.error("[bulk-request] notification failed:", err);
+    }
 
     return { status: "success", requestId: insertedRow.id };
   } catch (err) {

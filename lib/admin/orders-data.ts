@@ -73,6 +73,8 @@ export interface AdminOrderDetail {
   total: number;
   notes: string | null;
   internal_notes: string | null;
+  /** Set when this order was created from a bulk request (for the back-link). */
+  bulk_request_id: string | null;
   items: OrderItemRow[];
   history: OrderStatusHistoryRow[];
   bank_receipt: {
@@ -203,6 +205,17 @@ export async function getOrderDetail(orderNumber: string): Promise<AdminOrderDet
       }
     : null;
 
+  // If this order came from a bulk request, find it (for the back-link).
+  let bulkRequestId: string | null = null;
+  if (row.source === "bulk_conversion") {
+    const { data: bulkReq } = await db
+      .from("bulk_requests")
+      .select("id")
+      .eq("converted_order_id", row.id)
+      .maybeSingle();
+    bulkRequestId = (bulkReq as any)?.id ?? null;
+  }
+
   // History changed_by names
   const history: OrderStatusHistoryRow[] = [];
   const changerIds = [
@@ -253,6 +266,7 @@ export async function getOrderDetail(orderNumber: string): Promise<AdminOrderDet
     total: Number(row.total) || 0,
     notes: row.notes,
     internal_notes: row.internal_notes,
+    bulk_request_id: bulkRequestId,
     items: (row.order_items ?? []).map((it: any) => ({
       id: it.id,
       product_snapshot: it.product_snapshot,
