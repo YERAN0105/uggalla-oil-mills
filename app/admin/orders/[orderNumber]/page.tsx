@@ -103,7 +103,9 @@ export default async function OrderDetailPage({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-green-deep">{it.product_snapshot.name}</p>
+                    <p className="font-medium text-green-deep">
+                      {order.bulk_request_id ? "Bulk order" : it.product_snapshot.name}
+                    </p>
                     {it.product_snapshot.brand && (
                       <p className="text-xs text-muted-foreground">{it.product_snapshot.brand}</p>
                     )}

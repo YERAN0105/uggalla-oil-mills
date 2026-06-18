@@ -136,6 +136,10 @@ export interface OrderRow {
   loyalty_discount: number;
   total: number;
   notes: string | null;
+  /** Quote message snapshot — set only for orders converted from a bulk quote. */
+  quote_note?: string | null;
+  /** Order origin — "bulk_conversion" for orders created from a bulk quote. */
+  source?: string | null;
   created_at: string;
 }
 

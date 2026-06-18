@@ -93,7 +93,10 @@ export function OrderInternalNotes({
                 <div className="mt-1 space-y-1">
                   {items.map((content, j) => (
                     <p key={j} className="whitespace-pre-wrap text-sm text-green-deep">
-                      {content}
+                      {/* Snapshotted multi-line messages encode newlines as U+2028
+                          (so they survive the one-note-per-line storage). Turn them
+                          back into real line breaks for display. */}
+                      {content.split(String.fromCharCode(0x2028)).join(String.fromCharCode(10))}
                     </p>
                   ))}
                 </div>

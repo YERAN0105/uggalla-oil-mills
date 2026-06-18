@@ -115,7 +115,7 @@ export function ConfirmDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   confirmLabel?: string;
   destructive?: boolean;
   loading?: boolean;

@@ -117,7 +117,9 @@ export default async function AdminInvoicePage({
             {order.items.map((item) => (
               <tr key={item.id} className="border-b border-sand/60">
                 <td className="py-2.5 pr-2">
-                  <p className="font-medium">{item.product_snapshot.name}</p>
+                  <p className="font-medium">
+                    {order.bulk_request_id ? "Bulk order" : item.product_snapshot.name}
+                  </p>
                   <p className="text-xs text-muted-foreground">{item.options.size?.label}</p>
                 </td>
                 <td className="py-2.5 text-center">{item.quantity}</td>
@@ -141,6 +143,13 @@ export default async function AdminInvoicePage({
             <span>{formatCurrency(order.total)}</span>
           </div>
         </div>
+
+        {order.quote_note && (
+          <div className="mt-6 border-t border-sand pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quote details</p>
+            <p className="mt-1 whitespace-pre-line text-sm text-green-deep">{order.quote_note}</p>
+          </div>
+        )}
 
         <p className="mt-8 border-t border-sand pt-4 text-center text-xs text-muted-foreground">
           Thank you for choosing {shop.name ?? brand.name}. {brand.tagline}

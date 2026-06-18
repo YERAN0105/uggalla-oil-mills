@@ -85,15 +85,35 @@ export default async function BulkRequestsPage() {
                       <Package className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="font-medium text-green-deep">{req.product_name ?? "Loose / bulk oil"}</p>
+                      <p className="font-medium text-green-deep">
+                        {req.items.length > 1
+                          ? `${req.items.length} products`
+                          : req.items[0]?.name ?? req.product_name ?? "Loose / bulk oil"}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {req.quantity} {req.unit} · {req.fulfillment_type === "delivery" ? "Delivery" : "Pickup"} ·
-                        Submitted {formatShortDate(req.created_at)}
+                        {req.fulfillment_type === "delivery" ? "Delivery" : "Pickup"} · Submitted{" "}
+                        {formatShortDate(req.created_at)}
                       </p>
                     </div>
                   </div>
                   <Badge variant={statusVariant(req.status)}>{STATUS_LABEL[req.status]}</Badge>
                 </div>
+
+                {req.items.length > 0 && (
+                  <ul className="mt-3 space-y-1">
+                    {req.items.map((it, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center justify-between gap-2 rounded-lg bg-cream px-3 py-1.5 text-sm"
+                      >
+                        <span className="text-green-deep">{it.name ?? "Loose / bulk oil"}</span>
+                        <span className="text-muted-foreground">
+                          {it.quantity} {it.unit}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
 
                 {req.notes && (
                   <p className="mt-3 rounded-lg bg-cream px-3 py-2 text-sm text-muted-foreground">

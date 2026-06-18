@@ -81,6 +81,8 @@ export interface OrderNotificationPayload {
   viewOrderUrl: string;
   /** Optional context, e.g. a cancellation/refund or receipt-reject reason. */
   note?: string | null;
+  /** Quote message snapshot — present only for orders converted from a bulk quote. */
+  quoteNote?: string | null;
   /**
    * When true, this email contradicts what the customer was last told (a genuine
    * later reversal), so it opens with an apology. Only the receipt track sets it.
@@ -240,6 +242,7 @@ export async function notify(
         heading: content.heading,
         message: content.message,
         note: payload.note ?? null,
+        quoteNote: payload.quoteNote ?? null,
         items: payload.items,
         subtotal: payload.subtotal,
         deliveryFee: payload.deliveryFee,

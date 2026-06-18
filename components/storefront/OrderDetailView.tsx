@@ -93,7 +93,9 @@ export function OrderDetailView({ order }: { order: OrderWithItems }) {
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-green-deep leading-snug">{item.product_snapshot.name}</p>
+              <p className="font-medium text-green-deep leading-snug">
+                {order.source === "bulk_conversion" ? "Bulk order" : item.product_snapshot.name}
+              </p>
               <p className="text-sm text-muted-foreground">
                 {item.options.size?.label} · Qty {item.quantity}
               </p>
@@ -130,6 +132,16 @@ export function OrderDetailView({ order }: { order: OrderWithItems }) {
           </span>
         </div>
       </div>
+
+      {/* Quote details — only for orders created from a bulk quote */}
+      {order.quote_note && (
+        <div className="rounded-2xl border border-gold-warm/40 bg-gold/5 p-5">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gold-warm">
+            Quote details
+          </p>
+          <p className="whitespace-pre-line text-sm text-green-deep">{order.quote_note}</p>
+        </div>
+      )}
 
       {/* Fulfillment + payment */}
       <div className="grid sm:grid-cols-2 gap-4">

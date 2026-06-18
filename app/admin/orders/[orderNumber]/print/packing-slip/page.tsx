@@ -138,7 +138,13 @@ export default async function PackingSlipPage({
           <tbody>
             {order.items.map((item) => (
               <tr key={item.id} className="border-b border-sand">
-                <td className="py-3 text-lg font-bold">{item.product_snapshot.name}</td>
+                {/* For a quote-converted (bulk) order the product list lives in the
+                    Size column, so the Product column just shows "Bulk order" — this
+                    also tidies older orders whose name embedded the same list. Normal
+                    orders (no bulk_request_id) show their real product name. */}
+                <td className="py-3 text-lg font-bold">
+                  {order.bulk_request_id ? "Bulk order" : item.product_snapshot.name}
+                </td>
                 <td className="py-3 text-lg font-semibold">{item.options.size?.label ?? "—"}</td>
                 <td className="py-3 text-right text-2xl font-extrabold">×{item.quantity}</td>
               </tr>

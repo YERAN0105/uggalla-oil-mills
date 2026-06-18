@@ -335,7 +335,7 @@ async function buildPayload(
   const { data: o } = await db
     .from("orders")
     .select(
-      "order_number, user_id, guest_email, guest_phone, address_snapshot, fulfillment_type, delivery_date, subtotal, delivery_fee, discount_amount, loyalty_discount, loyalty_points_used, tax_amount, total, order_items(product_snapshot, options, quantity, line_total), user:users(name, phone), time_slot:time_slot_id(label)"
+      "order_number, user_id, guest_email, guest_phone, address_snapshot, fulfillment_type, delivery_date, subtotal, delivery_fee, discount_amount, loyalty_discount, loyalty_points_used, tax_amount, total, quote_note, source, order_items(product_snapshot, options, quantity, line_total), user:users(name, phone), time_slot:time_slot_id(label)"
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -353,8 +353,11 @@ async function buildPayload(
   const phone: string | null = row.guest_phone ?? row.user?.phone ?? snapshot.phone ?? null;
   const recipientName: string | null = snapshot.recipient ?? row.user?.name ?? null;
 
+  // A quote-converted order is one summarizing line; the product list lives in the
+  // size field, so show the name as "Bulk order" to avoid repeating the list.
+  const isBulk = row.source === "bulk_conversion";
   const items = ((row.order_items ?? []) as any[]).map((it) => ({
-    name: it.product_snapshot?.name ?? "Item",
+    name: isBulk ? "Bulk order" : it.product_snapshot?.name ?? "Item",
     sizeLabel: it.options?.size?.label ?? null,
     quantity: Number(it.quantity ?? 1),
     lineTotal: Number(it.line_total ?? 0),
@@ -381,6 +384,7 @@ async function buildPayload(
     fulfillmentType: row.fulfillment_type === "pickup" ? "pickup" : "delivery",
     deliveryDate: row.delivery_date ?? null,
     slotLabel: row.time_slot?.label ?? null,
+    quoteNote: row.quote_note ?? null,
     viewOrderUrl,
   };
 }

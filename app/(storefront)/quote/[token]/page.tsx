@@ -11,6 +11,7 @@ import { isPayHereEnabled } from "@/lib/integrations";
 import { brand, formatCurrency } from "@/lib/brand";
 import { formatShortDate } from "@/lib/date";
 import { signOrderToken } from "@/lib/orders/token";
+import { normalizeBulkItems } from "@/lib/bulk/items";
 import { DropletSVG } from "@/components/shared/DropletSVG";
 import { QuoteAcceptButton } from "@/components/storefront/QuoteAcceptButton";
 
@@ -124,11 +125,14 @@ export default async function QuotePage({ params }: { params: Promise<{ token: s
     );
   }
 
-  const productName = row.product_id
-    ? (await db.from("products").select("name").eq("id", row.product_id).maybeSingle()).data?.name
-    : null;
-  const product = productName ?? "Loose coconut oil";
-  const qty = `${row.quantity} ${row.unit}`;
+  const items = normalizeBulkItems(row.items, {
+    product_id: row.product_id ?? null,
+    name: row.product_id
+      ? (await db.from("products").select("name").eq("id", row.product_id).maybeSingle()).data?.name ?? null
+      : null,
+    quantity: Number(row.quantity) || 0,
+    unit: row.unit,
+  });
   const total = Number(row.quoted_total ?? 0);
 
   return (
@@ -140,13 +144,24 @@ export default async function QuotePage({ params }: { params: Promise<{ token: s
         </div>
         <div className="p-8">
           <dl className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Product</dt>
-              <dd className="font-medium text-green-deep">{product}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Quantity</dt>
-              <dd className="font-medium text-green-deep">{qty}</dd>
+            <div>
+              <dt className="mb-2 text-muted-foreground">
+                {items.length > 1 ? "Products" : "Product"}
+              </dt>
+              <dd>
+                <ul className="space-y-1">
+                  {items.map((it, i) => (
+                    <li key={i} className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-green-deep">
+                        {it.name ?? "Loose coconut oil"}
+                      </span>
+                      <span className="text-green-deep">
+                        {it.quantity} {it.unit}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
             </div>
             {row.quoted_unit_price ? (
               <div className="flex justify-between">

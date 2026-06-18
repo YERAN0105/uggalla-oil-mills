@@ -67,16 +67,35 @@ export async function submitBulkRequest(input: unknown): Promise<BulkRequestForm
       }
     }
 
+    // Resolve product names server-side (never trust client labels) and build the
+    // line-items snapshot. Line 1 is mirrored into the legacy scalar columns so
+    // existing single-product reads (admin search, FK, dashboard) keep working.
+    const productIds = [...new Set(data.items.map((it) => it.product_id))];
+    const { data: prodRows } = await admin
+      .from("products")
+      .select("id, name")
+      .in("id", productIds);
+    const nameById = new Map((prodRows ?? []).map((p) => [p.id, p.name]));
+
+    const items = data.items.map((it) => ({
+      product_id: it.product_id,
+      name: nameById.get(it.product_id) ?? null,
+      quantity: it.quantity,
+      unit: it.unit,
+    }));
+    const first = items[0];
+
     const { data: insertedRow, error } = await admin
       .from("bulk_requests")
       .insert({
-        product_id: data.product_id || null,
+        product_id: first.product_id || null,
         user_id: userId,
         name: data.name,
         email: data.email,
         phone: data.phone,
-        quantity: data.quantity,
-        unit: data.unit,
+        quantity: first.quantity,
+        unit: first.unit,
+        items,
         fulfillment_type: data.fulfillment_type,
         address_snapshot: addressSnapshot,
         preferred_date: data.preferred_date || null,
@@ -94,23 +113,12 @@ export async function submitBulkRequest(input: unknown): Promise<BulkRequestForm
     // Customer acknowledgement + admin alert (email + WhatsApp). Fire-and-forget:
     // a notification failure must never fail the request submission.
     try {
-      let productName: string | null = null;
-      if (data.product_id) {
-        const { data: prod } = await admin
-          .from("products")
-          .select("name")
-          .eq("id", data.product_id)
-          .maybeSingle();
-        productName = prod?.name ?? null;
-      }
       const { sendBulkRequestReceived } = await import("@/lib/notifications/transactional");
       await sendBulkRequestReceived({
         name: data.name,
         email: data.email,
         phone: data.phone,
-        productName,
-        quantity: data.quantity,
-        unit: data.unit,
+        items,
         requestId: insertedRow.id,
       });
     } catch (err) {

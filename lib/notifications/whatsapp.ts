@@ -217,7 +217,7 @@ export const WHATSAPP_TEMPLATES: Record<string, WhatsAppTemplateDef> = {
     name: "bulk_quote_sent",
     params: ["name", "product", "quantity", "quoted_total", "message", "payment_link"],
     description:
-      "Quote ready. message = the admin's note (flattened to one line; 'No additional notes.' when empty). payment_link is the pay-online URL for online quotes, or 'Our team will arrange payment & delivery.' for offline.",
+      "Quote ready. For multi-product requests, product = a one-line summary of all lines and quantity = the line count ('N products'). message = the admin's note (flattened to one line; 'No additional notes.' when empty). payment_link is the pay-online URL for online quotes, or 'Our team will arrange payment & delivery.' for offline.",
   },
   subscription_reminder: {
     name: "subscription_reminder",

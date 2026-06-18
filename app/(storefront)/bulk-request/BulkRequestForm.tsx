@@ -24,13 +24,12 @@ interface BulkRequestFormProps {
 type Values = {
   name: string;
   email: string;
-  product_id: string;
-  quantity: string;
-  unit: string;
   fulfillment_type: "delivery" | "pickup";
   preferred_date: string;
   notes: string;
 };
+
+type ItemRow = { product_id: string; quantity: string; unit: string };
 
 const SELECT_CLASS =
   "flex h-10 w-full rounded-md border border-input bg-cream px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-cream";
@@ -93,13 +92,13 @@ export function BulkRequestForm({
   const [values, setValues] = useState<Values>({
     name: user?.name ?? "",
     email: user?.email ?? "",
-    product_id: preselectedProductId ?? "",
-    quantity: "",
-    unit: "litres",
     fulfillment_type: "delivery",
     preferred_date: "",
     notes: "",
   });
+  const [items, setItems] = useState<ItemRow[]>([
+    { product_id: preselectedProductId ?? "", quantity: "", unit: "litres" },
+  ]);
   const [phoneDigits, setPhoneDigits] = useState(toLocalDigits(user?.phone ?? null));
 
   // Address state — mirrors the checkout flow.
@@ -130,9 +129,11 @@ export function BulkRequestForm({
       name: values.name,
       email: values.email,
       phone: phoneDigits ? `+94${phoneDigits}` : "",
-      product_id: values.product_id,
-      quantity: values.quantity,
-      unit: values.unit,
+      items: items.map((it) => ({
+        product_id: it.product_id,
+        quantity: it.quantity,
+        unit: it.unit,
+      })),
       fulfillment_type: values.fulfillment_type,
       savedAddressId: usingSaved ? savedAddressId : null,
       address_recipient: isDelivery && useNewAddress ? addr.recipient : "",
@@ -143,16 +144,30 @@ export function BulkRequestForm({
       preferred_date: values.preferred_date,
       notes: values.notes,
     }),
-    [values, phoneDigits, savedAddressId, useNewAddress, addr, addrPhoneDigits, isDelivery, usingSaved]
+    [values, items, phoneDigits, savedAddressId, useNewAddress, addr, addrPhoneDigits, isDelivery, usingSaved]
   );
 
   // Live validation with the SAME schema the server uses.
-  const errors = useMemo(() => {
-    const result = BulkRequestSchema.safeParse(formValues);
-    return result.success
-      ? {}
-      : (result.error.flatten().fieldErrors as Record<string, string[]>);
-  }, [formValues]);
+  const parsed = useMemo(() => BulkRequestSchema.safeParse(formValues), [formValues]);
+  const errors = useMemo(
+    () => (parsed.success ? {} : (parsed.error.flatten().fieldErrors as Record<string, string[]>)),
+    [parsed]
+  );
+  // Per-line item errors, keyed by row index then field — flatten() loses nested
+  // array paths, so walk the raw issues for anything under `items[i].field`.
+  const itemErrors = useMemo(() => {
+    const map: Record<number, Record<string, string>> = {};
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        if (issue.path[0] === "items" && typeof issue.path[1] === "number") {
+          const idx = issue.path[1];
+          const key = String(issue.path[2] ?? "_");
+          (map[idx] ??= {})[key] ??= issue.message;
+        }
+      }
+    }
+    return map;
+  }, [parsed]);
 
   // "Reward early, punish late": a field's error is shown only after it has been
   // blurred or a submit was attempted — then it clears live as the field becomes valid.
@@ -164,6 +179,18 @@ export function BulkRequestForm({
 
   const markTouched = (field: string) =>
     setTouched((t) => (t.has(field) ? t : new Set(t).add(field)));
+
+  const showItemError = (idx: number, key: string): string | undefined =>
+    touched.has(`item-${idx}-${key}`) || submitted ? itemErrors[idx]?.[key] : undefined;
+
+  const setItem = (idx: number, key: keyof ItemRow, value: string) =>
+    setItems((rows) => rows.map((r, i) => (i === idx ? { ...r, [key]: value } : r)));
+
+  const addItem = () =>
+    setItems((rows) => [...rows, { product_id: "", quantity: "", unit: "litres" }]);
+
+  const removeItem = (idx: number) =>
+    setItems((rows) => (rows.length > 1 ? rows.filter((_, i) => i !== idx) : rows));
 
   const scrollToFirstError = () => {
     requestAnimationFrame(() => {
@@ -180,7 +207,7 @@ export function BulkRequestForm({
     setSubmitted(true);
     setServerError(null);
 
-    if (Object.keys(errors).length > 0) {
+    if (!parsed.success) {
       scrollToFirstError();
       return;
     }
@@ -301,66 +328,95 @@ export function BulkRequestForm({
         </div>
       </fieldset>
 
-      {/* Product & quantity */}
+      {/* Products & quantities */}
       <fieldset className="space-y-4">
         <legend className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Product &amp; Quantity
+          Products &amp; Quantities
         </legend>
 
-        {products.length > 0 && (
-          <div className="space-y-1">
-            <Label htmlFor="product_id">Product of Interest *</Label>
-            <select
-              id="product_id"
-              value={values.product_id}
-              onChange={(e) => setField("product_id", e.target.value)}
-              onBlur={() => markTouched("product_id")}
-              aria-invalid={showError("product_id") ? true : undefined}
-              className={cn(SELECT_CLASS, showError("product_id") && "border-destructive")}
-            >
-              <option value="">Select a product</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-            <FieldError message={showError("product_id")} />
-          </div>
-        )}
+        <div className="space-y-4">
+          {items.map((it, idx) => (
+            <div key={idx} className="space-y-4 rounded-xl border border-sand bg-cream/40 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Product {idx + 1}
+                </p>
+                {items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeItem(idx)}
+                    className="text-xs font-medium text-destructive hover:underline"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <Label htmlFor="quantity">Quantity Needed *</Label>
-            <Input
-              id="quantity"
-              type="number"
-              min={1}
-              placeholder="e.g. 50"
-              value={values.quantity}
-              onChange={(e) => setField("quantity", e.target.value)}
-              onBlur={() => markTouched("quantity")}
-              aria-invalid={showError("quantity") ? true : undefined}
-              className={cn(showError("quantity") && "border-destructive")}
-            />
-            <FieldError message={showError("quantity")} />
-          </div>
+              {products.length > 0 && (
+                <div className="space-y-1">
+                  <Label htmlFor={`product_id-${idx}`}>Product of Interest *</Label>
+                  <select
+                    id={`product_id-${idx}`}
+                    value={it.product_id}
+                    onChange={(e) => setItem(idx, "product_id", e.target.value)}
+                    onBlur={() => markTouched(`item-${idx}-product_id`)}
+                    aria-invalid={showItemError(idx, "product_id") ? true : undefined}
+                    className={cn(SELECT_CLASS, showItemError(idx, "product_id") && "border-destructive")}
+                  >
+                    <option value="">Select a product</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError message={showItemError(idx, "product_id")} />
+                </div>
+              )}
 
-          <div className="space-y-1">
-            <Label htmlFor="unit">Unit *</Label>
-            <select
-              id="unit"
-              value={values.unit}
-              onChange={(e) => setField("unit", e.target.value)}
-              className={SELECT_CLASS}
-            >
-              <option value="litres">Litres</option>
-              <option value="cans">Cans (20L each)</option>
-              <option value="kg">Kilograms</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor={`quantity-${idx}`}>Quantity Needed *</Label>
+                  <Input
+                    id={`quantity-${idx}`}
+                    type="number"
+                    min={1}
+                    placeholder="e.g. 50"
+                    value={it.quantity}
+                    onChange={(e) => setItem(idx, "quantity", e.target.value)}
+                    onBlur={() => markTouched(`item-${idx}-quantity`)}
+                    aria-invalid={showItemError(idx, "quantity") ? true : undefined}
+                    className={cn(showItemError(idx, "quantity") && "border-destructive")}
+                  />
+                  <FieldError message={showItemError(idx, "quantity")} />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor={`unit-${idx}`}>Unit *</Label>
+                  <select
+                    id={`unit-${idx}`}
+                    value={it.unit}
+                    onChange={(e) => setItem(idx, "unit", e.target.value)}
+                    className={SELECT_CLASS}
+                  >
+                    <option value="litres">Litres</option>
+                    <option value="cans">Cans (20L each)</option>
+                    <option value="kg">Kilograms</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
+
+        <button
+          type="button"
+          onClick={addItem}
+          className="w-full rounded-xl border border-dashed border-sand p-3 text-sm font-medium text-muted-foreground transition-colors hover:border-green/40 hover:text-green"
+        >
+          + Add another product
+        </button>
       </fieldset>
 
       {/* Fulfillment */}

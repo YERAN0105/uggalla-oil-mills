@@ -76,16 +76,34 @@ This is for the "request a price" flow (loose / wholesale oil). Here's the full 
 
 ### 1. A request comes in
 When a customer asks for a quote, it shows up here as **New**. You and the customer both get an
-email. Open it to see the product, quantity, delivery/pickup details, and the **customer's note**.
+email. Open it to see the **list of products and how much of each**, the delivery/pickup details,
+and the **customer's note**.
+
+A customer can ask for **more than one product in a single request** — for example, coconut oil
+*and* sesame oil together. You'll see **every product listed**, each with its own quantity.
 
 ### 2. Send a quote
-Fill in the **total** (and, if you like, a per-unit price), write a **message** to the customer, and
-pick how they'll pay:
+Fill in the **total price**, write a **message** to the customer, and pick how they'll pay:
 - **Offline (the normal choice):** you arrange payment and delivery yourself (phone / bank / cash).
 - **Pay online:** only appears if online card payment (PayHere) is set up. The customer gets a
   secure link to pay by card, which makes an order automatically.
 
 Click **Send quote** → the customer gets it by email (and WhatsApp once set up).
+
+💡 **Easy way to write your message — "Copy products":** at the top, in the request box, click the
+**Copy products** button. It copies the whole list (each product and its quantity) for you. Now
+click inside your **message** and paste it (Ctrl-V) — every product lands on its **own line**, so you
+can just type a price next to each one. Example after pasting:
+
+```
+Coconut Oil — 200 litres
+Sesame Oil — 50 cans
+```
+
+ℹ️ **About the "unit price" box:** if the request has **only one product**, you'll also see an
+optional **unit price** box (like *Rs. 600 per litre*). If the request has **more than one product**,
+that box is **hidden on purpose** — one "per unit" price can't be correct for different products. Just
+fill in the **total**, and if you want, write the price for each product inside your message.
 
 **Changed your mind on the price?** Just send another quote — the new one **replaces** the old one
 (and if it was a pay-online quote, the old payment link stops working). You can re-quote as many

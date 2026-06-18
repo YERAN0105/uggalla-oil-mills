@@ -35,6 +35,8 @@ export interface OrderStatusEmailProps {
   message: string;
   /** Optional extra line, e.g. a cancellation/refund reason. */
   note?: string | null;
+  /** Quote message snapshot — shown for orders converted from a bulk quote. */
+  quoteNote?: string | null;
   items: OrderEmailItem[];
   subtotal: number;
   deliveryFee: number;
@@ -72,6 +74,7 @@ export function OrderStatusEmail(props: OrderStatusEmailProps) {
     heading,
     message,
     note,
+    quoteNote,
     items,
     subtotal,
     deliveryFee,
@@ -119,6 +122,17 @@ export function OrderStatusEmail(props: OrderStatusEmailProps) {
             {note ? (
               <Section style={{ backgroundColor: "#fef3c7", borderRadius: "8px", padding: "12px 16px", margin: "16px 0 0" }}>
                 <Text style={{ color: "#92400e", fontSize: "14px", margin: 0 }}>{note}</Text>
+              </Section>
+            ) : null}
+
+            {quoteNote ? (
+              <Section style={{ backgroundColor: colors.sand, borderRadius: "8px", padding: "12px 16px", margin: "16px 0 0" }}>
+                <Text style={{ color: colors.muted, fontSize: "11px", fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.5px", margin: "0 0 4px" }}>
+                  Quote details
+                </Text>
+                <Text style={{ color: colors.deep, fontSize: "14px", lineHeight: "21px", margin: 0, whiteSpace: "pre-line" as const }}>
+                  {quoteNote}
+                </Text>
               </Section>
             ) : null}
 

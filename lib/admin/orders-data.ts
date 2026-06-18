@@ -73,6 +73,8 @@ export interface AdminOrderDetail {
   total: number;
   notes: string | null;
   internal_notes: string | null;
+  /** Customer-facing quote message snapshot — set only for quote-converted orders. */
+  quote_note: string | null;
   /** Set when this order was created from a bulk request (for the back-link). */
   bulk_request_id: string | null;
   items: OrderItemRow[];
@@ -266,6 +268,7 @@ export async function getOrderDetail(orderNumber: string): Promise<AdminOrderDet
     total: Number(row.total) || 0,
     notes: row.notes,
     internal_notes: row.internal_notes,
+    quote_note: row.quote_note ?? null,
     bulk_request_id: bulkRequestId,
     items: (row.order_items ?? []).map((it: any) => ({
       id: it.id,

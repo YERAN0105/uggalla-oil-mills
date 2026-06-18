@@ -2,6 +2,7 @@
 // so these interfaces describe the exact shape the account pages consume.
 
 import type { OrderItemRow } from "@/types/checkout";
+import type { BulkRequestItem } from "@/types/supabase";
 
 export interface AccountOrderSummary {
   id: string;
@@ -50,6 +51,10 @@ export interface AccountOrderDetail {
   loyalty_discount: number;
   total: number;
   notes: string | null;
+  /** Snapshot of the quote message — set only for orders converted from a quote. */
+  quote_note: string | null;
+  /** Order origin — "bulk_conversion" for orders created from a bulk quote. */
+  source: string | null;
   created_at: string;
   order_items: (OrderItemRow & { product_id: string | null; reviewed: boolean })[];
   history: StatusHistoryEntry[];
@@ -75,7 +80,9 @@ export interface AccountSubscription {
 
 export interface AccountBulkRequest {
   id: string;
+  /** Primary product name (line 1) — kept for back-compat / list summaries. */
   product_name: string | null;
+  items: BulkRequestItem[];
   quantity: number;
   unit: string;
   fulfillment_type: "delivery" | "pickup";

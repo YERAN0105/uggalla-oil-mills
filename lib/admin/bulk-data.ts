@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AddressSnapshot } from "@/types/checkout";
+import type { BulkRequestItem } from "@/types/supabase";
+import { normalizeBulkItems, shortBulkItemsLabel } from "@/lib/bulk/items";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -7,7 +9,9 @@ export interface BulkRequestListRow {
   id: string;
   name: string;
   phone: string;
+  /** Compact summary, e.g. "Coconut Oil +2 more". */
   product_name: string | null;
+  items: BulkRequestItem[];
   quantity: number;
   unit: string;
   fulfillment_type: string;
@@ -23,6 +27,7 @@ export interface BulkRequestDetail {
   user_id: string | null;
   product_id: string | null;
   product_name: string | null;
+  items: BulkRequestItem[];
   quantity: number;
   unit: string;
   preferred_date: string | null;
@@ -54,7 +59,9 @@ export async function listBulkRequests(params: BulkListParams): Promise<BulkRequ
   const db = createAdminClient();
   let query = db
     .from("bulk_requests")
-    .select("id, name, phone, quantity, unit, fulfillment_type, status, created_at, product:products(name)")
+    .select(
+      "id, name, phone, product_id, quantity, unit, items, fulfillment_type, status, created_at, product:products(name)"
+    )
     .order("created_at", { ascending: false })
     .limit(200);
 
@@ -67,17 +74,26 @@ export async function listBulkRequests(params: BulkListParams): Promise<BulkRequ
   }
 
   const { data } = await query;
-  return ((data as any[]) ?? []).map((b) => ({
-    id: b.id,
-    name: b.name,
-    phone: b.phone,
-    product_name: b.product?.name ?? null,
-    quantity: Number(b.quantity) || 0,
-    unit: b.unit,
-    fulfillment_type: b.fulfillment_type,
-    status: b.status,
-    created_at: b.created_at,
-  }));
+  return ((data as any[]) ?? []).map((b) => {
+    const items = normalizeBulkItems(b.items, {
+      product_id: b.product_id ?? null,
+      name: b.product?.name ?? null,
+      quantity: Number(b.quantity) || 0,
+      unit: b.unit,
+    });
+    return {
+      id: b.id,
+      name: b.name,
+      phone: b.phone,
+      product_name: items.length ? shortBulkItemsLabel(items) : b.product?.name ?? null,
+      items,
+      quantity: Number(b.quantity) || 0,
+      unit: b.unit,
+      fulfillment_type: b.fulfillment_type,
+      status: b.status,
+      created_at: b.created_at,
+    };
+  });
 }
 
 export async function getBulkRequestDetail(id: string): Promise<BulkRequestDetail | null> {
@@ -91,6 +107,12 @@ export async function getBulkRequestDetail(id: string): Promise<BulkRequestDetai
     .maybeSingle();
   if (!b) return null;
   const row = b as any;
+  const items = normalizeBulkItems(row.items, {
+    product_id: row.product_id ?? null,
+    name: row.product?.name ?? null,
+    quantity: Number(row.quantity) || 0,
+    unit: row.unit,
+  });
 
   return {
     id: row.id,
@@ -100,6 +122,7 @@ export async function getBulkRequestDetail(id: string): Promise<BulkRequestDetai
     user_id: row.user_id,
     product_id: row.product_id,
     product_name: row.product?.name ?? null,
+    items,
     quantity: Number(row.quantity) || 0,
     unit: row.unit,
     preferred_date: row.preferred_date,
