@@ -32,11 +32,18 @@ export function OrderStatusEditor({
   status,
   fulfillmentType,
   history,
+  placedAt,
 }: {
   orderId: string;
   status: string;
   fulfillmentType: "delivery" | "pickup";
   history: OrderStatusHistoryRow[];
+  /**
+   * The order's original creation time. "Placed" is pinned to this and never
+   * changes — an order is only ever placed once, even though the DB reuses the
+   * `pending_confirmation` status when an order is reverted back to pending.
+   */
+  placedAt: string;
 }) {
   const router = useRouter();
   const [next, setNext] = useState("");
@@ -72,6 +79,9 @@ export function OrderStatusEditor({
           // Latest entry for this status (history is oldest-first), so a reverted
           // and re-reached step shows its new time/admin, not the original stale one.
           const hist = [...history].reverse().find((h) => h.status === step.key);
+          // "Placed" is the exception: always show the original creation time,
+          // never a later revert-to-pending entry (same status, different meaning).
+          const displayTime = step.key === "pending_confirmation" ? placedAt : hist?.changed_at;
           return (
             <li key={step.key} className="relative">
               <span
@@ -85,11 +95,14 @@ export function OrderStatusEditor({
                 {step.label}
               </p>
               {/* Only show the time/admin for steps currently reached, so a
-                  reverted (unchecked) step never shows a stale time. */}
-              {done && hist && (
+                  reverted (unchecked) step never shows a stale time. Placed shows
+                  the original creation time with no admin attribution. */}
+              {done && displayTime && (
                 <p className="text-xs text-muted-foreground">
-                  {formatDateTime(hist.changed_at)}
-                  {hist.changed_by_name ? ` · ${hist.changed_by_name}` : ""}
+                  {formatDateTime(displayTime)}
+                  {step.key !== "pending_confirmation" && hist?.changed_by_name
+                    ? ` · ${hist.changed_by_name}`
+                    : ""}
                 </p>
               )}
             </li>

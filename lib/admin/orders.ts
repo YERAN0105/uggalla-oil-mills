@@ -80,6 +80,9 @@ export async function updateOrderStatus(
   let earnedPoints = 0;
   if (status === "delivered") {
     earnedPoints = await earnLoyaltyForOrder(orderId);
+    // A bulk request is only "completed" once its converted order is delivered.
+    // No-op for normal orders (none reference them via converted_order_id).
+    await db.from("bulk_requests").update({ status: "completed" }).eq("converted_order_id", orderId);
   }
   // Reverse loyalty if a previously-delivered order is cancelled/refunded.
   if ((status === "cancelled" || status === "refunded") && prevStatus === "delivered") {

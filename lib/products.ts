@@ -30,7 +30,7 @@ const PRODUCT_SELECT = `
   stock_tracked, stock_quantity, low_stock_threshold,
   meta_title, meta_description, created_at,
   brands:brand_id(id, name, slug),
-  categories:category_id(id, name, slug, is_bulk),
+  categories:category_id!inner(id, name, slug, is_bulk),
   product_images(id, url, alt_text, is_primary, display_order),
   product_sizes(id, label, volume_ml, price, display_order)
 `;

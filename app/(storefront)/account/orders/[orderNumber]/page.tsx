@@ -82,7 +82,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
 
       {/* Timeline */}
       <div className="mb-6">
-        <StatusTimeline status={order.status} fulfillmentType={order.fulfillment_type} history={order.history} />
+        <StatusTimeline status={order.status} fulfillmentType={order.fulfillment_type} history={order.history} placedAt={order.created_at} />
       </div>
 
       {/* Actions */}

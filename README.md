@@ -67,6 +67,13 @@ In your Supabase dashboard → SQL Editor, run **all** migrations in order:
 5. **`005_address_delivery_zone.sql`** — remembers a delivery zone per saved address
 6. **`006_email_has_account.sql`** — checkout "you already have an account" helper
 7. **`007_phase4_account.sql`** — account soft-delete, one-review-per-item, review delete policy
+8. **`008_phase5_admin.sql`** — admin customer notes, `banner-images` + `site-assets` storage buckets
+9. **`009_notification_debounce.sql`** — debounced order-status notifications (buffer + ledger)
+10. **`010_receipt_notifications.sql`** — bank-receipt notification track
+11. **`011_receipt_id_anchor.sql`** — receipt-id anchor for correction/apology logic
+
+> After deploy, the **minute-level dispatcher** for debounced order-status emails is
+> scheduled via Supabase `pg_cron`/`pg_net` — see [`docs/POST_DEPLOY_STEPS.md`](docs/POST_DEPLOY_STEPS.md).
 
 > **Tip:** If you have the Supabase CLI installed:
 > ```bash
@@ -168,10 +175,60 @@ types/
 | Phase 2 | ✅ Done | Products, catalog, search, product detail, wishlist UI, bulk request form |
 | Phase 3 | ✅ Done | Cart, checkout, PayHere + bank transfer + COD, orders, subscriptions, guest tracking |
 | Phase 4 | ✅ Done | Customer account: orders, invoices, subscriptions, bulk-request history, addresses, DB wishlist, loyalty, reviews, profile |
-| Phase 5 | Pending | Full admin panel |
-| Phase 6 | Pending | Email/WhatsApp notifications, SEO, performance, deployment |
+| Phase 5 | ✅ Done | Full admin panel — dashboard, all CRUD, orders, bulk quotes, customers, settings, logs |
+| Phase 6 | ✅ Done | Email + WhatsApp notifications, subscription-reminder & review crons, bulk quote pay-online page, SEO, polish |
 
 See `MASTER_SPEC.md` for the full spec and `docs/PHASE_N.md` for each phase's detail. Project conventions for contributors are in `CLAUDE.md`.
+
+---
+
+## Notifications (Phase 6)
+
+Transactional notifications go out over **email (Resend)** and **WhatsApp (Cloud API)**, both
+gated by their env vars — when a channel isn't configured its sends are skipped (never error).
+
+- **Order-status & bank-receipt emails** are **debounced** (≈3 min) and forward-only — see
+  `CLAUDE.md` → "Notifications & Crons" and `docs/POST_DEPLOY_STEPS.md`.
+- **Transactional events** (`welcome`, `bulk_request_received`, `bulk_quote_sent`,
+  `subscription_reminder`, `review_request`) live in `lib/notifications/transactional.ts`.
+- **Branded templates:** `emails/OrderStatusEmail.tsx` (orders) + `emails/NotificationEmail.tsx`
+  (everything else). WhatsApp templates are listed in `lib/notifications/whatsapp.ts` and must be
+  created/approved in Meta — see [`docs/WHATSAPP_SETUP.md`](docs/WHATSAPP_SETUP.md).
+- **Per-channel + per-event toggles:** Admin → Settings → Notifications.
+
+### Scheduled jobs (cron)
+
+| Route | Schedule | Driven by |
+|---|---|---|
+| `/api/cron/dispatch-notifications` | every minute (only when rows are due) | Supabase `pg_cron` (post-deploy) |
+| `/api/cron/subscription-reminders` | daily | Vercel Cron (`vercel.json`) |
+| `/api/cron/review-requests` | daily | Vercel Cron (`vercel.json`) |
+
+All cron routes require `Authorization: Bearer ${CRON_SECRET}`. Vercel sends this header
+automatically for the jobs in `vercel.json` once `CRON_SECRET` is set in the project env.
+
+---
+
+## Deployment (Vercel)
+
+1. Push to GitHub and import the repo into Vercel.
+2. Set all production env vars (Supabase, `NEXT_PUBLIC_APP_URL`, `RESEND_*`, `CRON_SECRET`, and —
+   when ready — `PAYHERE_*` and `WHATSAPP_*`).
+3. Provision the production Supabase project and run migrations `001`→`011` + both seed files.
+4. After the first deploy, complete [`docs/POST_DEPLOY_STEPS.md`](docs/POST_DEPLOY_STEPS.md)
+   (schedule the `pg_cron` dispatcher; verify a test notification end-to-end).
+5. Add a custom domain + SSL; submit `/sitemap.xml` to Google Search Console.
+
+See also: [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md),
+[`docs/PAYHERE_SETUP.md`](docs/PAYHERE_SETUP.md),
+[`docs/WHATSAPP_SETUP.md`](docs/WHATSAPP_SETUP.md), and the non-technical
+[`docs/ADMIN_GUIDE.md`](docs/ADMIN_GUIDE.md).
+
+### Favicons & PWA icons
+
+`app/manifest.ts` currently points at `/public/logo.jpeg`. Before launch, generate square PNG
+icons (192×192, 512×512, a maskable variant, and a 180×180 `apple-icon.png`) from the logo and
+drop them in `app/` (Next's icon convention) or `public/`, then update `manifest.ts`.
 
 ---
 

@@ -35,6 +35,14 @@ export async function signUp(formData: FormData) {
     await supabase
       .from("users")
       .upsert({ id: data.user.id, name, phone }, { onConflict: "id" });
+
+    // Welcome notification — fire-and-forget; never block or fail signup.
+    try {
+      const { sendWelcome } = await import("@/lib/notifications/transactional");
+      await sendWelcome({ name, email, phone });
+    } catch (err) {
+      console.error("[signUp] welcome notification failed:", err);
+    }
   }
 
   revalidatePath("/", "layout");

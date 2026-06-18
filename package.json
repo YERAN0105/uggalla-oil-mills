@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
-    "seed-admin": "tsx scripts/seed-admin.ts"
+    "seed-admin": "tsx scripts/seed-admin.ts",
+    "test-welcome": "tsx --tsconfig scripts/tsconfig.email.json scripts/test-welcome.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",

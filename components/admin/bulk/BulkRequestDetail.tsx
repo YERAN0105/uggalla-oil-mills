@@ -58,6 +58,9 @@ export function BulkRequestDetail({
   const [copied, setCopied] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [converting, setConverting] = useState(false);
+  // Offline payment method for the converted order — mirrors a normal order.
+  const [convertMethod, setConvertMethod] = useState<"cod" | "bank_transfer">("cod");
+  const cashLabel = r.fulfillment_type === "pickup" ? "Pay at Store" : "Cash on Delivery";
 
   const setStatus = async (status: string) => {
     const res = await updateBulkStatus(r.id, status);
@@ -96,7 +99,7 @@ export function BulkRequestDetail({
 
   const convert = async () => {
     setConverting(true);
-    const res = await convertBulkToOrder(r.id);
+    const res = await convertBulkToOrder(r.id, convertMethod);
     setConverting(false);
     setConvertOpen(false);
     if (!res.ok) return toast.error(res.error);
@@ -151,19 +154,29 @@ export function BulkRequestDetail({
               />
             </dl>
             {r.fulfillment_type === "delivery" && r.address_snapshot && (
-              <p className="mt-3 text-sm text-muted-foreground">
-                {[
-                  r.address_snapshot.line1,
-                  r.address_snapshot.line2,
-                  r.address_snapshot.city,
-                  r.address_snapshot.postal_code,
-                ]
-                  .filter(Boolean)
-                  .join(", ")}
-              </p>
+              <div className="mt-4 border-t border-sand pt-3">
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Delivery address</dt>
+                <dd className="mt-1 text-sm text-green-deep">
+                  {[
+                    r.address_snapshot.recipient,
+                    r.address_snapshot.phone,
+                    r.address_snapshot.line1,
+                    r.address_snapshot.line2,
+                    r.address_snapshot.city,
+                    r.address_snapshot.postal_code,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </dd>
+              </div>
             )}
             {r.notes && (
-              <p className="mt-3 rounded-lg bg-sand/40 px-3 py-2 text-sm text-green-deep">{r.notes}</p>
+              <div className="mt-4 border-t border-sand pt-3">
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Customer note</dt>
+                <dd className="mt-1 whitespace-pre-wrap rounded-lg border border-sand bg-sand/40 px-3 py-2 text-sm text-green-deep">
+                  {r.notes}
+                </dd>
+              </div>
             )}
             {r.attachments.length > 0 && (
               <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -181,6 +194,13 @@ export function BulkRequestDetail({
           {/* Quote section */}
           <Panel>
             <h2 className="mb-4 font-display text-lg font-semibold text-green-deep">Quote</h2>
+            {r.converted_order_id ? (
+              <p className="rounded-lg bg-sand/40 px-3 py-2 text-sm text-muted-foreground">
+                This request has been converted to an order, so the quote is locked. To change
+                pricing, manage the order instead.
+              </p>
+            ) : (
+              <>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Unit price (optional)">
                 <Input
@@ -260,6 +280,8 @@ export function BulkRequestDetail({
                 Send quote
               </Button>
             </div>
+              </>
+            )}
           </Panel>
 
           {/* Internal notes */}
@@ -278,13 +300,34 @@ export function BulkRequestDetail({
             ) : (
               <p className="mb-3 text-sm text-muted-foreground">No notes yet.</p>
             )}
-            <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Add a note…" />
-            <div className="mt-2 flex justify-end">
-              <Button onClick={addNote} disabled={noteSaving || !note.trim()} className="gap-2">
-                {noteSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-                Add note
-              </Button>
-            </div>
+            {r.converted_order_id ? (
+              // Once converted, the order is the live place for notes. Lock this and
+              // point the admin to the order (its note was copied over at conversion).
+              <p className="rounded-lg border border-sand bg-sand/30 px-3 py-2 text-xs text-muted-foreground">
+                This request is now an order. To add or update notes,{" "}
+                {r.converted_order_number ? (
+                  <Link
+                    href={`/admin/orders/${r.converted_order_number}`}
+                    className="font-medium text-green hover:underline"
+                  >
+                    edit them on the order
+                  </Link>
+                ) : (
+                  "edit them on the order"
+                )}
+                .
+              </p>
+            ) : (
+              <>
+                <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Add a note…" />
+                <div className="mt-2 flex justify-end">
+                  <Button onClick={addNote} disabled={noteSaving || !note.trim()} className="gap-2">
+                    {noteSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Add note
+                  </Button>
+                </div>
+              </>
+            )}
           </Panel>
         </div>
 
@@ -342,9 +385,32 @@ export function BulkRequestDetail({
               <p className="text-2xl font-bold text-green-deep">{formatCurrency(r.quoted_total)}</p>
               <p className="text-xs capitalize text-muted-foreground">{r.payment_mode} payment</p>
               {!r.converted_order_id && (
-                <Button onClick={() => setConvertOpen(true)} className="mt-3 w-full">
-                  Convert to order
-                </Button>
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs font-medium text-green-deep">Payment method for the order</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setConvertMethod("cod")}
+                      className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                        convertMethod === "cod" ? "border-green bg-sage/30 text-green-deep" : "border-sand text-muted-foreground"
+                      }`}
+                    >
+                      {cashLabel}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConvertMethod("bank_transfer")}
+                      className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                        convertMethod === "bank_transfer" ? "border-green bg-sage/30 text-green-deep" : "border-sand text-muted-foreground"
+                      }`}
+                    >
+                      Bank transfer
+                    </button>
+                  </div>
+                  <Button onClick={() => setConvertOpen(true)} className="w-full">
+                    Convert to order
+                  </Button>
+                </div>
               )}
             </Panel>
           )}
@@ -355,7 +421,9 @@ export function BulkRequestDetail({
         open={convertOpen}
         onOpenChange={setConvertOpen}
         title="Convert to a tracked order?"
-        description="This creates an order with a single bulk line item. You'll record payment manually."
+        description={`Creates an order (single bulk line item) set to "${
+          convertMethod === "cod" ? cashLabel : "Bank transfer"
+        }". You can then manage it like any normal order.`}
         confirmLabel="Create order"
         destructive={false}
         loading={converting}

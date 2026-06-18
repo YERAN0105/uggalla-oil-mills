@@ -133,11 +133,37 @@ export default async function ProductDetailPage({ params }: PDPProps) {
         : undefined,
   };
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${appUrl}/` },
+      { "@type": "ListItem", position: 2, name: "Shop", item: `${appUrl}/shop` },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: product.categories.name,
+        item: `${appUrl}/shop/category/${product.categories.slug}`,
+      },
+      {
+        "@type": "ListItem",
+        position: 4,
+        name: product.name,
+        item: `${appUrl}/shop/${product.slug}`,
+      },
+    ],
+  };
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd) }}
       />
 
       <div className="min-h-screen bg-cream pb-20 md:pb-0">

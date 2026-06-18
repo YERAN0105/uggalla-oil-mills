@@ -63,6 +63,14 @@ export default async function OrderDetailPage({
             })}
           </Badge>
           <span className="text-sm text-muted-foreground">{formatDateTime(order.created_at)}</span>
+          {order.bulk_request_id && (
+            <Link
+              href={`/admin/bulk-requests/${order.bulk_request_id}`}
+              className="text-sm text-green hover:underline"
+            >
+              ← Converted from bulk request
+            </Link>
+          )}
         </div>
       </div>
 
@@ -74,6 +82,7 @@ export default async function OrderDetailPage({
             status={order.status}
             fulfillmentType={order.fulfillment_type}
             history={order.history}
+            placedAt={order.created_at}
           />
 
           {/* Items */}
@@ -232,6 +241,15 @@ export default async function OrderDetailPage({
               {order.delivery_date && <p>Date: {formatShortDate(order.delivery_date)}</p>}
               {order.time_slot && <p>Slot: {order.time_slot.label}</p>}
             </div>
+
+            {order.notes && (
+              <div className="mt-3 rounded-lg border-l-4 border-green/50 bg-sage/20 p-2.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Customer note
+                </p>
+                <p className="mt-0.5 whitespace-pre-wrap text-sm text-green-deep">{order.notes}</p>
+              </div>
+            )}
 
             {contacts.secondaryContact && (
               <div className="mt-3 rounded-lg border border-sand bg-sand/30 p-2.5">

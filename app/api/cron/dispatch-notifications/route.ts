@@ -124,6 +124,13 @@ export async function POST(request: Request) {
       continue;
     }
 
+    // Surface the cancellation/refund reason (latest status-history note) so both
+    // the email and the WhatsApp template can include it.
+    if (targetStatus === "cancelled" || targetStatus === "refunded") {
+      const reason = await latestStatusNote(db, orderId, targetStatus);
+      if (reason) payload.note = `Reason: ${reason}`;
+    }
+
     const results = await notify(event, payload);
     const sentChannels = results.filter((r) => r.status === "sent");
     const realFailures = results.filter((r) => r.status === "failed");
@@ -293,6 +300,23 @@ async function latestRejectReason(
   return (data as any)?.reject_reason ?? null;
 }
 
+/** The note attached to the most recent status-history row for a given status. */
+async function latestStatusNote(
+  db: ReturnType<typeof createAdminClient>,
+  orderId: string,
+  status: string
+): Promise<string | null> {
+  const { data } = await db
+    .from("order_status_history")
+    .select("note, changed_at")
+    .eq("order_id", orderId)
+    .eq("status", status)
+    .order("changed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data as any)?.note ?? null;
+}
+
 function lastError(results: NotifyChannelResult[]): string {
   return (
     results
@@ -311,7 +335,7 @@ async function buildPayload(
   const { data: o } = await db
     .from("orders")
     .select(
-      "order_number, user_id, guest_email, guest_phone, address_snapshot, fulfillment_type, delivery_date, subtotal, delivery_fee, discount_amount, loyalty_discount, loyalty_points_used, tax_amount, total, order_items(product_snapshot, options, quantity, line_total), user:users(name, phone)"
+      "order_number, user_id, guest_email, guest_phone, address_snapshot, fulfillment_type, delivery_date, subtotal, delivery_fee, discount_amount, loyalty_discount, loyalty_points_used, tax_amount, total, order_items(product_snapshot, options, quantity, line_total), user:users(name, phone), time_slot:time_slot_id(label)"
     )
     .eq("id", orderId)
     .maybeSingle();
@@ -356,6 +380,7 @@ async function buildPayload(
     total: Number(row.total ?? 0),
     fulfillmentType: row.fulfillment_type === "pickup" ? "pickup" : "delivery",
     deliveryDate: row.delivery_date ?? null,
+    slotLabel: row.time_slot?.label ?? null,
     viewOrderUrl,
   };
 }

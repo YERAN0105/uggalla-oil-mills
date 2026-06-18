@@ -8,10 +8,16 @@ interface Props {
   status: string;
   fulfillmentType: "delivery" | "pickup";
   history: StatusHistoryEntry[];
+  /**
+   * The order's original creation time. "Placed" is pinned to this and never
+   * changes — an order is only ever placed once, even though the DB reuses the
+   * `pending_confirmation` status when an order is reverted back to pending.
+   */
+  placedAt: string;
 }
 
 /** Horizontal (desktop) / vertical (mobile) stepper of order milestones. */
-export function StatusTimeline({ status, fulfillmentType, history }: Props) {
+export function StatusTimeline({ status, fulfillmentType, history, placedAt }: Props) {
   const steps = timelineSteps(fulfillmentType);
   const currentIndex = statusStepIndex(status);
   const isCancelled = status === "cancelled" || status === "refunded";
@@ -23,6 +29,9 @@ export function StatusTimeline({ status, fulfillmentType, history }: Props) {
   for (const h of history) {
     reachedAt.set(h.status, h.changed_at);
   }
+  // "Placed" is the exception: always the original creation time, regardless of
+  // any later revert-to-pending entries that share the pending_confirmation status.
+  reachedAt.set("pending_confirmation", placedAt);
 
   if (isCancelled) {
     const cancelEntry = history.find((h) => h.status === status);

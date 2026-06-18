@@ -15,15 +15,23 @@ const ORDER_SELECT = `
   bank_transfer_receipts(id, status, uploaded_at)
 `;
 
+interface ReceiptRow {
+  status: string;
+  uploaded_at: string;
+}
+interface HistoryRow {
+  changed_at: string;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function shape(row: any): OrderWithItems {
-  const receipts: any[] = (row.bank_transfer_receipts ?? []).sort(
-    (a: any, b: any) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime()
-  );
-  const bank_receipt = receipts.find((r) => r.status === "pending") ?? receipts[0] ?? null;
-  const history: any[] = (row.order_status_history ?? [])
+  const receipts: ReceiptRow[] = ((row.bank_transfer_receipts ?? []) as ReceiptRow[])
     .slice()
-    .sort((a: any, b: any) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime());
+    .sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+  const bank_receipt = receipts.find((r) => r.status === "pending") ?? receipts[0] ?? null;
+  const history: HistoryRow[] = ((row.order_status_history ?? []) as HistoryRow[])
+    .slice()
+    .sort((a, b) => new Date(a.changed_at).getTime() - new Date(b.changed_at).getTime());
   return { ...row, history, bank_receipt } as OrderWithItems;
 }
 
