@@ -10,6 +10,7 @@ import { notify } from "@/lib/notifications";
 import { signOrderToken } from "@/lib/orders/token";
 import { formatInColombo } from "@/lib/date";
 import { addDays } from "date-fns";
+import { normalizeBulkItems, summarizeBulkItems } from "@/lib/bulk/items";
 import type { ActionResult } from "@/types/admin";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -75,7 +76,7 @@ export async function sendQuote(
   // (a price change at that point is an order-level change, not a new quote).
   const { data: existing } = await db
     .from("bulk_requests")
-    .select("converted_order_id")
+    .select("converted_order_id, items")
     .eq("id", id)
     .maybeSingle();
   if (!existing) return { ok: false, error: "Request not found." };
@@ -86,8 +87,15 @@ export async function sendQuote(
     };
   }
 
+  // A single unit price is only meaningful for a one-product request. For a
+  // multi-product request there is no single per-unit number, so never store one
+  // (the quote is a single grand total). Final authority — don't trust the client.
+  const existingItems = (existing as { items: unknown }).items;
+  const itemCount = Array.isArray(existingItems) ? existingItems.length : 0;
+  const unitPrice = itemCount > 1 ? null : input.unitPrice ?? null;
+
   const update: Record<string, unknown> = {
-    quoted_unit_price: input.unitPrice ?? null,
+    quoted_unit_price: unitPrice,
     quoted_total: input.total,
     quote_message: input.message || null,
     status: "quoted",
@@ -124,22 +132,23 @@ export async function sendQuote(
   try {
     const { data: br } = await db
       .from("bulk_requests")
-      .select("name, email, phone, quantity, unit, product_id")
+      .select("name, email, phone, quantity, unit, product_id, items, product:products(name)")
       .eq("id", id)
       .maybeSingle();
     if (br) {
       const row = br as any;
-      const productName = row.product_id
-        ? (await db.from("products").select("name").eq("id", row.product_id).maybeSingle()).data?.name ?? null
-        : null;
+      const items = normalizeBulkItems(row.items, {
+        product_id: row.product_id ?? null,
+        name: row.product?.name ?? null,
+        quantity: Number(row.quantity ?? 0),
+        unit: row.unit ?? "litres",
+      });
       const { sendBulkQuoteSent } = await import("@/lib/notifications/transactional");
       await sendBulkQuoteSent({
         name: row.name ?? null,
         email: row.email ?? null,
         phone: row.phone ?? null,
-        productName,
-        quantity: Number(row.quantity ?? 0),
-        unit: row.unit ?? "L",
+        items,
         quotedTotal: input.total,
         message: input.message || null,
         payLink: quoteLink,
@@ -199,7 +208,18 @@ export async function convertBulkToOrder(
   const productName = row.product_id
     ? (await db.from("products").select("name").eq("id", row.product_id).maybeSingle()).data?.name
     : null;
-  const label = `Bulk: ${productName ?? "Loose coconut oil"} — ${row.quantity} ${row.unit}`;
+  // The request can carry multiple product lines; the converted order keeps ONE
+  // summarizing line at the quoted total (per the pricing model). The line's name
+  // is a short header ("Bulk order") and the product list lives in the size field,
+  // so the two never repeat each other on the packing slip / invoice / email.
+  const items = normalizeBulkItems(row.items, {
+    product_id: row.product_id ?? null,
+    name: productName ?? null,
+    quantity: Number(row.quantity) || 0,
+    unit: row.unit,
+  });
+  const label = "Bulk order";
+  const itemsSummary = summarizeBulkItems(items);
 
   const orderNumber = generateOrderNumber();
   const total = Number(row.quoted_total) || 0;
@@ -213,15 +233,19 @@ export async function convertBulkToOrder(
   //
   // The order's notes card stores one note per line as "[time] author: text". The
   // bulk request's internal notes are ALREADY in that format, so we carry them over
-  // as-is (each stays its own clean bullet). The quote message is free-form, so we
-  // add it as a single labelled line in the same format (newlines flattened).
-  const flatten = (s: string) => s.replace(/\s*\n+\s*/g, " ").trim();
+  // as-is (each stays its own clean bullet). The quote message is free-form and may
+  // span several lines, so we keep it on ONE stored line but preserve its line
+  // breaks by encoding each newline as U+2028 (a line separator that is NOT "\n",
+  // so it survives the line-based parser). The notes renderer turns them back into
+  // real line breaks. Outer whitespace is trimmed and trailing spaces dropped.
+  const encodeMultiline = (s: string) =>
+    s.replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").trim().replace(/\n/g, " ");
   const stamp = new Date().toISOString();
   // All authored "Bulk request" so the order's notes card renders them in a
   // visually distinct, clearly-labelled group, separate from notes added later.
   const parts: string[] = [];
   if (row.quote_message)
-    parts.push(`[${stamp}] Bulk request: Quote message to customer — ${flatten(row.quote_message)}`);
+    parts.push(`[${stamp}] Bulk request: Quote message to customer — ${encodeMultiline(row.quote_message)}`);
   // The bulk internal notes are stored one "[time] author: text" per line. Carry
   // EACH note over as its own line → its own inner card, so multiple notes stay
   // clearly separated (never merged onto one line).
@@ -254,6 +278,10 @@ export async function convertBulkToOrder(
       source: "bulk_conversion",
       notes: row.notes,
       internal_notes: internalNotesSnapshot,
+      // Customer-facing snapshot of the quote message (price breakdown etc.) —
+      // shown on the order page, invoices and price emails. Only set here (and in
+      // acceptQuote); normal checkout orders leave it null.
+      quote_note: row.quote_message ?? null,
     })
     .select("id, order_number")
     .single();
@@ -269,7 +297,7 @@ export async function convertBulkToOrder(
       image: null,
     },
     options: {
-      size: { id: null, label: `${row.quantity} ${row.unit}`, volume_ml: null, price: total },
+      size: { id: null, label: itemsSummary, volume_ml: null, price: total },
       quantity: 1,
       note: "",
       is_subscription: false,
@@ -306,7 +334,8 @@ export async function convertBulkToOrder(
       email: row.email ?? null,
       phone: row.phone ?? null,
       recipientName: row.name ?? null,
-      items: [{ name: label, sizeLabel: `${row.quantity} ${row.unit}`, quantity: 1, lineTotal: total }],
+      quoteNote: row.quote_message ?? null,
+      items: [{ name: label, sizeLabel: itemsSummary, quantity: 1, lineTotal: total }],
       subtotal: total,
       deliveryFee: 0,
       discount: 0,

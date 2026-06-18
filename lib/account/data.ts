@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { normalizeBulkItems } from "@/lib/bulk/items";
 import type {
   AccountOrderSummary,
   AccountOrderDetail,
@@ -128,7 +129,7 @@ const DETAIL_SELECT = `
   id, order_number, user_id, status, fulfillment_type, address_snapshot,
   delivery_date, payment_method, payment_status, subtotal, delivery_fee,
   discount_amount, tax_amount, loyalty_points_used, loyalty_discount, total,
-  notes, created_at,
+  notes, quote_note, source, created_at,
   order_items(id, product_id, product_snapshot, options, quantity, unit_price, line_total),
   delivery_zone:delivery_zone_id(id, name, estimated_time),
   time_slot:time_slot_id(id, label),
@@ -185,6 +186,8 @@ export async function getAccountOrderDetail(
     loyalty_discount: Number(row.loyalty_discount),
     total: Number(row.total),
     notes: row.notes,
+    quote_note: row.quote_note ?? null,
+    source: row.source ?? null,
     created_at: row.created_at,
     order_items: (row.order_items ?? []).map((i: any) => ({
       ...i,
@@ -246,7 +249,7 @@ export async function getAccountBulkRequests(userId: string): Promise<AccountBul
   const { data } = await admin
     .from("bulk_requests")
     .select(
-      `id, quantity, unit, fulfillment_type, preferred_date, notes, status,
+      `id, product_id, quantity, unit, items, fulfillment_type, preferred_date, notes, status,
        quoted_unit_price, quoted_total, quote_message, payment_mode, quote_token,
        quote_expires_at, converted_order_id, created_at,
        products:product_id(name),
@@ -255,9 +258,17 @@ export async function getAccountBulkRequests(userId: string): Promise<AccountBul
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  return ((data ?? []) as any[]).map((r) => ({
+  return ((data ?? []) as any[]).map((r) => {
+    const items = normalizeBulkItems(r.items, {
+      product_id: r.product_id ?? null,
+      name: r.products?.name ?? null,
+      quantity: Number(r.quantity),
+      unit: r.unit,
+    });
+    return {
     id: r.id,
-    product_name: r.products?.name ?? null,
+    product_name: items[0]?.name ?? r.products?.name ?? null,
+    items,
     quantity: Number(r.quantity),
     unit: r.unit,
     fulfillment_type: r.fulfillment_type,
@@ -273,7 +284,8 @@ export async function getAccountBulkRequests(userId: string): Promise<AccountBul
     converted_order_id: r.converted_order_id,
     converted_order_number: r.orders?.order_number ?? null,
     created_at: r.created_at,
-  }));
+    };
+  });
 }
 
 export async function getAccountAddresses(userId: string): Promise<AccountAddress[]> {

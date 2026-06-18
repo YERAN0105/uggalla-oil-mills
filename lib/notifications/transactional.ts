@@ -16,6 +16,7 @@ import { NotificationEmail, type NotificationEmailProps } from "@/emails/Notific
 import { sendEmail } from "./email";
 import { sendWhatsAppTemplate } from "./whatsapp";
 import { logNotification, type ChannelResult } from "./log";
+import { summarizeBulkItems, type BulkRequestItem } from "@/lib/bulk/items";
 import type { NotificationSettings } from "@/types/admin";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -151,15 +152,20 @@ export async function sendBulkRequestReceived(input: {
   name: string | null;
   email: string | null;
   phone: string | null;
-  productName: string | null;
-  quantity: number;
-  unit: string;
+  items: BulkRequestItem[];
   requestId: string;
 }): Promise<void> {
-  const product = input.productName ?? "Loose coconut oil";
-  const qty = `${input.quantity} ${input.unit}`;
+  const summary = summarizeBulkItems(input.items);
+  // One labelled row per product, so the customer/admin see the full mixed order.
+  const itemRows = input.items.map((it) => ({
+    label: it.name?.trim() || "Loose coconut oil",
+    value: `${it.quantity} ${it.unit}`,
+  }));
+  const productCount = input.items.length;
   const paragraphs = [
-    `We've received your request for a quote on ${product} (${qty}).`,
+    productCount > 1
+      ? `We've received your request for a quote on ${productCount} products.`
+      : `We've received your request for a quote on ${summary}.`,
     "Our team will review it and send you a personalised quote shortly. We'll be in touch by email and WhatsApp.",
   ];
   await dispatch(
@@ -167,16 +173,13 @@ export async function sendBulkRequestReceived(input: {
     {
       to: input.email,
       subject: `We've received your quote request — ${brand.name}`,
-      text: `Hi ${input.name ?? "there"},\n\n${paragraphs.join("\n\n")}\n\n— ${brand.name}`,
+      text: `Hi ${input.name ?? "there"},\n\n${paragraphs.join("\n\n")}\n\nYour request: ${summary}\n\n— ${brand.name}`,
       props: {
         preview: "We've received your bulk quote request",
         recipientName: input.name,
         heading: "Quote request received",
         paragraphs,
-        rows: [
-          { label: "Product", value: product },
-          { label: "Quantity", value: qty },
-        ],
+        rows: itemRows,
         ...FOOT,
       },
     },
@@ -189,8 +192,8 @@ export async function sendBulkRequestReceived(input: {
       "bulk_request_admin_alert",
       {
         to: brand.email,
-        subject: `New bulk quote request — ${product}`,
-        text: `New bulk request from ${input.name ?? "a customer"} (${input.email ?? "no email"}, ${input.phone ?? "no phone"}).\nProduct: ${product}\nQuantity: ${qty}\n\nReview: ${APP_URL}/admin/bulk-requests/${input.requestId}`,
+        subject: `New bulk quote request — ${summary}`,
+        text: `New bulk request from ${input.name ?? "a customer"} (${input.email ?? "no email"}, ${input.phone ?? "no phone"}).\nProducts: ${summary}\n\nReview: ${APP_URL}/admin/bulk-requests/${input.requestId}`,
         props: {
           preview: "New bulk quote request",
           heading: "New bulk quote request",
@@ -198,10 +201,7 @@ export async function sendBulkRequestReceived(input: {
             `${input.name ?? "A customer"} has requested a quote.`,
             `Contact: ${input.email ?? "—"} · ${input.phone ?? "—"}`,
           ],
-          rows: [
-            { label: "Product", value: product },
-            { label: "Quantity", value: qty },
-          ],
+          rows: itemRows,
           cta: { label: "Review request", url: `${APP_URL}/admin/bulk-requests/${input.requestId}` },
           ...FOOT,
         },
@@ -217,21 +217,32 @@ export async function sendBulkQuoteSent(input: {
   name: string | null;
   email: string | null;
   phone: string | null;
-  productName: string | null;
-  quantity: number;
-  unit: string;
+  items: BulkRequestItem[];
   quotedTotal: number;
   message: string | null;
   /** Pay-online link — only present for online quotes (PayHere). */
   payLink: string | null;
 }): Promise<void> {
-  const product = input.productName ?? "Loose coconut oil";
-  const qty = `${input.quantity} ${input.unit}`;
+  const summary = summarizeBulkItems(input.items);
   const total = formatCurrency(input.quotedTotal);
+  // For WhatsApp's fixed-parameter template: {{2}} product / {{3}} quantity stay
+  // single-line. With multiple lines we collapse products into the summary and
+  // show the line count as the "quantity" slot so both stay meaningful.
+  const waProduct = input.items.length > 1 ? summary : input.items[0]?.name ?? "Loose coconut oil";
+  const waQty =
+    input.items.length > 1
+      ? `${input.items.length} products`
+      : `${input.items[0]?.quantity ?? ""} ${input.items[0]?.unit ?? ""}`.trim() || "—";
+
+  // One labelled row per product, then the quoted total.
+  const itemRows = input.items.map((it) => ({
+    label: it.name?.trim() || "Loose coconut oil",
+    value: `${it.quantity} ${it.unit}`,
+  }));
 
   // The admin's note is shown as its own clearly-labelled box (see props.message),
   // not mixed into the system paragraphs, so the customer can tell it apart.
-  const paragraphs = [`Here's your quote for ${product} (${qty}).`];
+  const paragraphs = [`Here's your quote for ${summary}.`];
   if (input.payLink) {
     paragraphs.push("You can review and pay for your order securely online using the button below.");
   } else {
@@ -244,7 +255,7 @@ export async function sendBulkQuoteSent(input: {
       to: input.email,
       subject: `Your quote from ${brand.name}`,
       text:
-        `Hi ${input.name ?? "there"},\n\nYour quote for ${product} (${qty}): ${total}.\n` +
+        `Hi ${input.name ?? "there"},\n\nYour quote for ${summary}: ${total}.\n` +
         (input.message ? `\nMessage from ${brand.name}:\n${input.message}\n` : "") +
         (input.payLink ? `\nPay online: ${input.payLink}\n` : "\nWe'll arrange payment & delivery directly.\n") +
         `\n— ${brand.name}`,
@@ -253,11 +264,7 @@ export async function sendBulkQuoteSent(input: {
         recipientName: input.name,
         heading: "Your quote is ready",
         paragraphs,
-        rows: [
-          { label: "Product", value: product },
-          { label: "Quantity", value: qty },
-          { label: "Quoted total", value: total },
-        ],
+        rows: [...itemRows, { label: "Quoted total", value: total }],
         message: input.message ? { label: `Message from ${brand.name}`, text: input.message } : null,
         cta: input.payLink ? { label: "Accept & pay online", url: input.payLink } : null,
         footnote: input.payLink ? "This secure payment link expires in 7 days." : null,
@@ -274,8 +281,8 @@ export async function sendBulkQuoteSent(input: {
       // to one line and falls back to neutral text when absent.
       bodyParams: [
         input.name ?? "there",
-        product,
-        qty,
+        waProduct,
+        waQty,
         total,
         input.message ? waFlatten(input.message) : "No additional notes.",
         input.payLink ?? "Our team will arrange payment & delivery.",

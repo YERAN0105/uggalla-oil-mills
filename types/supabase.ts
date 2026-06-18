@@ -195,6 +195,7 @@ export type Database = {
           address_snapshot: Json | null;
           quantity: number;
           unit: string;
+          items: Json;
           preferred_date: string | null;
           notes: string | null;
           status: "new" | "in_progress" | "quoted" | "accepted" | "rejected" | "completed";
@@ -220,6 +221,7 @@ export type Database = {
           address_snapshot?: Json | null;
           quantity: number;
           unit?: string;
+          items?: Json;
           preferred_date?: string | null;
           notes?: string | null;
           status?: "new" | "in_progress" | "quoted" | "accepted" | "rejected" | "completed";
@@ -361,6 +363,15 @@ export type Brand = Database["public"]["Tables"]["brands"]["Row"];
 export type Category = Database["public"]["Tables"]["categories"]["Row"];
 export type Product = Database["public"]["Tables"]["products"]["Row"];
 export type BulkRequest = Database["public"]["Tables"]["bulk_requests"]["Row"];
+
+/** One product line on a bulk request (stored in `bulk_requests.items` JSONB). */
+export interface BulkRequestItem {
+  product_id: string | null;
+  /** Product name snapshot at submit time (null for loose / unspecified). */
+  name: string | null;
+  quantity: number;
+  unit: string;
+}
 export type Review = Database["public"]["Tables"]["reviews"]["Row"];
 
 export type KeyFact = { label: string; value: string };

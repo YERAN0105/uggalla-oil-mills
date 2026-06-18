@@ -13,6 +13,7 @@ import {
   Copy,
   Check,
   StickyNote,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { Panel, Field, ConfirmDialog } from "@/components/admin/primitives";
 import { bulkStatusVariant } from "@/components/admin/bulk/BulkRequestsClient";
 import { formatCurrency } from "@/lib/brand";
 import { formatShortDate } from "@/lib/date";
+import { bulkItemLabel } from "@/lib/bulk/items";
 import {
   updateBulkStatus,
   saveBulkInternalNote,
@@ -42,6 +44,10 @@ export function BulkRequestDetail({
 }) {
   const router = useRouter();
   const r = request;
+  // A single "unit price" only makes sense for a one-product request. With
+  // multiple products there's no single per-unit number, so we hide the field
+  // and quote a single grand total (the breakdown can go in the message).
+  const singleItem = r.items.length <= 1;
 
   const [unitPrice, setUnitPrice] = useState(r.quoted_unit_price != null ? String(r.quoted_unit_price) : "");
   const [total, setTotal] = useState(r.quoted_total != null ? String(r.quoted_total) : "");
@@ -50,12 +56,14 @@ export function BulkRequestDetail({
     r.payment_mode === "online" && payHereEnabled ? "online" : "offline"
   );
   const [sending, setSending] = useState(false);
+  const [quoteConfirmOpen, setQuoteConfirmOpen] = useState(false);
   const [note, setNote] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
   const [quoteLink, setQuoteLink] = useState<string | null>(
     r.quote_token ? `${typeof window !== "undefined" ? window.location.origin : ""}/quote/${r.quote_token}` : null
   );
   const [copied, setCopied] = useState(false);
+  const [productsCopied, setProductsCopied] = useState(false);
   const [convertOpen, setConvertOpen] = useState(false);
   const [converting, setConverting] = useState(false);
   // Offline payment method for the converted order — mirrors a normal order.
@@ -69,20 +77,28 @@ export function BulkRequestDetail({
     router.refresh();
   };
 
+  // Open the confirmation popup (after a quick total check) so the admin can
+  // review exactly what will be sent before it goes to the customer.
+  const openQuoteConfirm = () => {
+    if (!(Number(total) > 0)) return toast.error("Enter a quote total.");
+    setQuoteConfirmOpen(true);
+  };
+
   const submitQuote = async () => {
     const totalNum = Number(total);
     if (!(totalNum > 0)) return toast.error("Enter a quote total.");
     setSending(true);
     const res = await sendQuote(r.id, {
-      unitPrice: unitPrice ? Number(unitPrice) : null,
+      unitPrice: singleItem && unitPrice ? Number(unitPrice) : null,
       total: totalNum,
       message,
       paymentMode,
     });
     setSending(false);
+    setQuoteConfirmOpen(false);
     if (!res.ok) return toast.error(res.error);
     setQuoteLink(res.data?.quoteLink ?? null);
-    toast.success("Quote saved. (Notifications send in Phase 6.)");
+    toast.success("Quote sent to the customer.");
     router.refresh();
   };
 
@@ -112,6 +128,16 @@ export function BulkRequestDetail({
     navigator.clipboard.writeText(quoteLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  // Copy all products as "Name — quantity unit", one per line, so the admin can
+  // paste them into the quote message and add a price next to each.
+  const copyProducts = () => {
+    if (r.items.length === 0) return;
+    navigator.clipboard.writeText(r.items.map(bulkItemLabel).join("\n"));
+    setProductsCopied(true);
+    toast.success("Products copied — paste into the message.");
+    setTimeout(() => setProductsCopied(false), 1500);
   };
 
   const internalLines = (r.internal_notes ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
@@ -144,9 +170,39 @@ export function BulkRequestDetail({
           {/* Request details */}
           <Panel>
             <h2 className="mb-3 font-display text-lg font-semibold text-green-deep">Request</h2>
+            <div className="mb-4">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Products ({r.items.length})
+                </dt>
+                {r.items.length > 0 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={copyProducts}
+                    className="h-7 gap-1 text-xs"
+                  >
+                    {productsCopied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {productsCopied ? "Copied" : "Copy products"}
+                  </Button>
+                )}
+              </div>
+              <ul className="space-y-1">
+                {r.items.map((it, i) => (
+                  <li
+                    key={i}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-sand bg-sand/40 px-3 py-2 text-sm"
+                  >
+                    <span className="text-green-deep">{it.name ?? "Loose / unspecified"}</span>
+                    <span className="font-medium text-green-deep">
+                      {it.quantity} {it.unit}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
             <dl className="grid gap-3 sm:grid-cols-2 text-sm">
-              <Detail2 label="Product of interest" value={r.product_name ?? "Loose / unspecified"} />
-              <Detail2 label="Quantity" value={`${r.quantity} ${r.unit}`} />
               <Detail2 label="Fulfillment" value={r.fulfillment_type} />
               <Detail2
                 label="Preferred date"
@@ -201,16 +257,18 @@ export function BulkRequestDetail({
               </p>
             ) : (
               <>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Unit price (optional)">
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={unitPrice}
-                  onChange={(e) => setUnitPrice(e.target.value)}
-                  placeholder="per unit"
-                />
-              </Field>
+            <div className={`grid gap-4 ${singleItem ? "sm:grid-cols-2" : ""}`}>
+              {singleItem && (
+                <Field label="Unit price (optional)">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={unitPrice}
+                    onChange={(e) => setUnitPrice(e.target.value)}
+                    placeholder="per unit"
+                  />
+                </Field>
+              )}
               <Field label="Total" required>
                 <Input
                   type="number"
@@ -220,6 +278,12 @@ export function BulkRequestDetail({
                 />
               </Field>
             </div>
+            {!singleItem && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                This request has multiple products, so there&apos;s no single unit price. Enter the
+                overall total — you can break down the per-product pricing in the message below.
+              </p>
+            )}
             <div className="mt-4">
               <Field label="Customer message">
                 <Textarea
@@ -275,7 +339,7 @@ export function BulkRequestDetail({
             )}
 
             <div className="mt-4 flex justify-end">
-              <Button onClick={submitQuote} disabled={sending} className="gap-2">
+              <Button onClick={openQuoteConfirm} disabled={sending} className="gap-2">
                 {sending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Send quote
               </Button>
@@ -384,6 +448,11 @@ export function BulkRequestDetail({
               <h2 className="mb-2 font-display text-base font-semibold text-green-deep">Quoted</h2>
               <p className="text-2xl font-bold text-green-deep">{formatCurrency(r.quoted_total)}</p>
               <p className="text-xs capitalize text-muted-foreground">{r.payment_mode} payment</p>
+              <Button asChild variant="outline" size="sm" className="mt-3 w-full gap-2">
+                <Link href={`/admin/bulk-requests/${r.id}/quote-invoice`} target="_blank">
+                  <FileText className="h-4 w-4" /> View as quotation
+                </Link>
+              </Button>
               {!r.converted_order_id && (
                 <div className="mt-3 space-y-2">
                   <p className="text-xs font-medium text-green-deep">Payment method for the order</p>
@@ -416,6 +485,35 @@ export function BulkRequestDetail({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={quoteConfirmOpen}
+        onOpenChange={setQuoteConfirmOpen}
+        title="Send this quote to the customer?"
+        description={
+          <span className="mt-1 block space-y-1">
+            <span className="block">
+              <strong>Total:</strong> {formatCurrency(Number(total) || 0)}
+            </span>
+            {singleItem && unitPrice ? (
+              <span className="block">
+                <strong>Unit price:</strong> {formatCurrency(Number(unitPrice))}
+              </span>
+            ) : null}
+            <span className="block">
+              <strong>Payment:</strong>{" "}
+              {paymentMode === "online" ? "Pay online (secure link)" : "Offline (you arrange payment)"}
+            </span>
+            <span className="block whitespace-pre-line">
+              <strong>Message:</strong> {message.trim() ? message.trim() : "— none —"}
+            </span>
+          </span>
+        }
+        confirmLabel="Send quote"
+        destructive={false}
+        loading={sending}
+        onConfirm={submitQuote}
+      />
 
       <ConfirmDialog
         open={convertOpen}

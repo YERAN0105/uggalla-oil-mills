@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPayHereEnabled } from "@/lib/integrations";
 import { formatInColombo } from "@/lib/date";
+import { normalizeBulkItems, summarizeBulkItems } from "@/lib/bulk/items";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -70,7 +71,14 @@ export async function acceptQuote(token: string): Promise<AcceptQuoteResult> {
   const productName = row.product_id
     ? (await db.from("products").select("name").eq("id", row.product_id).maybeSingle()).data?.name
     : null;
-  const label = `Bulk: ${productName ?? "Loose coconut oil"} — ${row.quantity} ${row.unit}`;
+  const items = normalizeBulkItems(row.items, {
+    product_id: row.product_id ?? null,
+    name: productName ?? null,
+    quantity: Number(row.quantity) || 0,
+    unit: row.unit,
+  });
+  const label = "Bulk order";
+  const itemsSummary = summarizeBulkItems(items);
   const total = Number(row.quoted_total);
   const orderNumber = generateOrderNumber();
 
@@ -94,6 +102,8 @@ export async function acceptQuote(token: string): Promise<AcceptQuoteResult> {
       total,
       source: "bulk_conversion",
       notes: row.notes,
+      // Customer-facing snapshot of the quote message (price breakdown etc.).
+      quote_note: row.quote_message ?? null,
     })
     .select("id, order_number")
     .single();
@@ -104,7 +114,7 @@ export async function acceptQuote(token: string): Promise<AcceptQuoteResult> {
     product_id: row.product_id,
     product_snapshot: { name: label, brand: null, slug: "", image: null },
     options: {
-      size: { id: null, label: `${row.quantity} ${row.unit}`, volume_ml: null, price: total },
+      size: { id: null, label: itemsSummary, volume_ml: null, price: total },
       quantity: 1,
       note: "",
       is_subscription: false,

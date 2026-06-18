@@ -5,6 +5,18 @@ import { z } from "zod";
 // never duplicating these rules elsewhere.
 export const phoneRegex = /^(\+94|0)[0-9]{9}$/;
 
+// One product line on the request. A bulk request carries one or more of these.
+export const BulkRequestItemSchema = z.object({
+  product_id: z.string().uuid("Please select a product"),
+  quantity: z.coerce
+    .number()
+    .positive("Quantity must be greater than 0")
+    .max(100000, "Quantity is too large"),
+  unit: z.enum(["litres", "cans", "kg", "other"]),
+});
+
+export type BulkRequestItemInput = z.infer<typeof BulkRequestItemSchema>;
+
 export const BulkRequestSchema = z
   .object({
     name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -12,12 +24,10 @@ export const BulkRequestSchema = z
     phone: z
       .string()
       .regex(phoneRegex, "Enter a valid Sri Lankan phone number (e.g. +94771234567)"),
-    product_id: z.string().uuid("Please select a product"),
-    quantity: z.coerce
-      .number()
-      .positive("Quantity must be greater than 0")
-      .max(100000, "Quantity is too large"),
-    unit: z.enum(["litres", "cans", "kg", "other"]),
+    items: z
+      .array(BulkRequestItemSchema)
+      .min(1, "Add at least one product")
+      .max(20, "Too many products in one request"),
     fulfillment_type: z.enum(["delivery", "pickup"]),
     // Delivery address — either a saved address id (logged-in users) or the
     // new-address fields below. Ownership of a saved id is verified server-side.

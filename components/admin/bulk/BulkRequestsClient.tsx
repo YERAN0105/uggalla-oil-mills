@@ -156,7 +156,9 @@ export function BulkRequestsClient({
                     {r.product_name ?? "—"}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {r.quantity} {r.unit}
+                    {r.items.length > 1
+                      ? `${r.items.length} items`
+                      : `${r.items[0]?.quantity ?? r.quantity} ${r.items[0]?.unit ?? r.unit}`}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-sm capitalize text-muted-foreground">
                     {r.fulfillment_type}

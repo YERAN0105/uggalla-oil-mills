@@ -151,7 +151,9 @@ export default async function OrderDetailPage({ params }: PageProps) {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-medium leading-snug text-green-deep">{item.product_snapshot.name}</p>
+              <p className="font-medium leading-snug text-green-deep">
+                {order.source === "bulk_conversion" ? "Bulk order" : item.product_snapshot.name}
+              </p>
               <p className="text-sm text-muted-foreground">
                 {item.product_snapshot.brand ? `${item.product_snapshot.brand} · ` : ""}
                 {item.options.size?.label} · Qty {item.quantity}
@@ -195,6 +197,16 @@ export default async function OrderDetailPage({ params }: PageProps) {
           </div>
         ))}
       </div>
+
+      {/* Quote details — only for orders created from a bulk quote */}
+      {order.quote_note && (
+        <div className="mb-6 rounded-2xl border border-gold-warm/40 bg-gold/5 p-5">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gold-warm">
+            Quote details
+          </p>
+          <p className="whitespace-pre-line text-sm text-green-deep">{order.quote_note}</p>
+        </div>
+      )}
 
       {/* Pricing + fulfillment */}
       <div className="grid gap-4 md:grid-cols-2">

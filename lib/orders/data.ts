@@ -7,7 +7,7 @@ const ORDER_SELECT = `
   id, order_number, user_id, guest_email, guest_phone, status, fulfillment_type,
   delivery_zone_id, address_snapshot, delivery_date, time_slot_id,
   payment_method, payment_status, subtotal, delivery_fee, discount_amount,
-  tax_amount, loyalty_points_used, loyalty_discount, total, notes, created_at,
+  tax_amount, loyalty_points_used, loyalty_discount, total, notes, quote_note, source, created_at,
   order_items(id, product_snapshot, options, quantity, unit_price, line_total),
   delivery_zone:delivery_zone_id(id, name, fee, estimated_time),
   time_slot:time_slot_id(id, label),
