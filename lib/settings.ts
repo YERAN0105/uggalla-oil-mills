@@ -10,6 +10,9 @@ import type {
 const DEFAULT_TAX: TaxSettings = { rate: 0, inclusive: false, label: "Tax" };
 
 const DEFAULT_LOYALTY: LoyaltySettings = {
+  // Default ON so existing behavior is unchanged until an admin turns a side off.
+  earn_enabled: true,
+  redeem_enabled: true,
   earn_rate: 1,
   earn_per_amount: 100,
   redeem_rate: 50,
@@ -51,7 +54,10 @@ export async function getTaxSettings(): Promise<TaxSettings> {
 }
 
 export async function getLoyaltySettings(): Promise<LoyaltySettings> {
-  return getSetting<LoyaltySettings>("loyalty", DEFAULT_LOYALTY);
+  // Merge over defaults so a settings row saved before the on/off toggles existed
+  // still reports earn/redeem as enabled (back-compat).
+  const stored = await getSetting<Partial<LoyaltySettings>>("loyalty", DEFAULT_LOYALTY);
+  return { ...DEFAULT_LOYALTY, ...stored };
 }
 
 export async function getCodLimits(): Promise<CodLimits> {

@@ -88,7 +88,14 @@ Fill in the **total price**, write a **message** to the customer, and pick how t
 - **Pay online:** only appears if online card payment (PayHere) is set up. The customer gets a
   secure link to pay by card, which makes an order automatically.
 
-Click **Send quote** → the customer gets it by email (and WhatsApp once set up).
+Click **Send quote** → the customer gets it by email (and WhatsApp once set up). Your **message is
+shown to the customer** — on the quote email, and (after you convert it) on their order page, their
+invoice, and order emails, in a **"Quote details"** box. So write it as something the customer should
+see (e.g. the price breakdown). Line breaks are kept, so each product/price can be on its own line.
+
+📄 **See it as a printable quotation:** once a quote exists, the **Quoted** box has a **"View as
+quotation"** button. It opens a clean, printable quotation page (your shop details, the products, the
+total, your note) that you can **Print / Save as PDF** to send the customer.
 
 💡 **Easy way to write your message — "Copy products":** at the top, in the request box, click the
 **Copy products** button. It copies the whole list (each product and its quantity) for you. Now
@@ -135,6 +142,29 @@ or send a reminder by hand.
 
 ---
 
+## Loyalty points (`/admin/loyalty`)
+
+Customers earn points and can spend them for money off at checkout. Here you set the **rules** (how
+many points per Rs. spent, what each point is worth, expiry, review bonus) and can **manually add or
+remove** points for a customer (goodwill or fixes).
+
+**Two on/off switches at the top:**
+- **Earning points** — when **OFF**, customers stop collecting new points (from delivered orders and
+  reviews). Points they already have are **kept, never deleted**.
+- **Spending points** — when **OFF**, the "redeem points" box disappears at checkout, so points
+  can't be used right now.
+
+You can use these independently:
+- **Pause everything:** turn both OFF (balances are frozen but kept).
+- **Wind the program down kindly:** turn **Earning OFF but leave Spending ON** — customers can still
+  use the points they already earned, but won't collect new ones. (The page shows a little
+  "wind-down" hint when you do this.)
+
+Turning a switch back ON resumes that side instantly. Click **Save settings** after changing
+anything.
+
+---
+
 ## Other day-to-day areas
 
 - **Customers** (`/admin/customers`) — see their orders, total spent, add private notes,
@@ -145,7 +175,8 @@ or send a reminder by hand.
 - **Delivery zones** (`/admin/delivery-zones`) and **Schedule** (`/admin/schedule`) — delivery
   fees, time slots, how many orders per slot, and closed/holiday days.
 - **Reviews** (`/admin/reviews`) — approve, hide, or reply to customer reviews.
-- **Loyalty** (`/admin/loyalty`) — points earning/spending rules and manual adjustments.
+- **Loyalty** (`/admin/loyalty`) — points rules, the earn/spend on-off switches, and manual
+  adjustments (see the **Loyalty points** section above).
 - **Activity logs** (`/admin/logs`) — a history of everything admins have done.
 
 ---
@@ -155,8 +186,9 @@ or send a reminder by hand.
 - **Shop info** — name, logo, contact details, opening hours.
 - **Tax** — the tax rate, and whether prices already include tax.
 - **Subscriptions** — which reminder frequencies you offer.
-- **Payment** — your bank details and Cash-on-Delivery limits. (Online card keys for PayHere are set
-  up separately by your developer; this tab only shows whether it's switched on.)
+- **Payment** — your bank details and Cash-on-Delivery limits. (Online card payments via PayHere are
+  switched on with keys, not here — this tab only shows whether it's on. Setup steps:
+  `docs/PAYHERE_SETUP.md`.)
 - **Notifications** — turn email and WhatsApp on or off, and switch individual messages on/off.
   The WhatsApp message templates are listed here for reference.
 - **SEO** — your site title, description, and the picture shown when the site is shared on social

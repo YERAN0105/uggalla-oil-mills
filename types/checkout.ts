@@ -50,6 +50,10 @@ export interface TaxSettings {
 }
 
 export interface LoyaltySettings {
+  /** Master switch for earning points (delivered orders, review bonus). */
+  earn_enabled: boolean;
+  /** Master switch for spending points (checkout redemption). */
+  redeem_enabled: boolean;
   earn_rate: number;
   earn_per_amount: number;
   redeem_rate: number;
