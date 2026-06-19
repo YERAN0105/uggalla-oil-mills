@@ -63,6 +63,7 @@ export async function earnLoyaltyForOrder(orderId: string): Promise<number> {
   if (existing) return 0;
 
   const loyalty = await getLoyaltySettings();
+  if (!loyalty.earn_enabled) return 0; // earning paused by admin
   const points = Math.floor(Number(order.total) / loyalty.earn_per_amount) * loyalty.earn_rate;
   if (points <= 0) return 0;
 

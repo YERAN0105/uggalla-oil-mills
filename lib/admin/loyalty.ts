@@ -12,6 +12,8 @@ export async function saveLoyaltySettings(input: LoyaltySettings): Promise<Actio
   const admin = await requireAdmin();
   const db = createAdminClient();
   const clean: LoyaltySettings = {
+    earn_enabled: input.earn_enabled !== false,
+    redeem_enabled: input.redeem_enabled !== false,
     earn_rate: Number(input.earn_rate) || 0,
     earn_per_amount: Number(input.earn_per_amount) || 1,
     redeem_rate: Number(input.redeem_rate) || 0,

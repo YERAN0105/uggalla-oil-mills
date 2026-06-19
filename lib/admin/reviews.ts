@@ -25,6 +25,7 @@ async function awardReviewBonus(db: ReturnType<typeof createAdminClient>, review
   const userId = (review as any).user_id as string;
 
   const loyalty = await getLoyaltySettings();
+  if (!loyalty.earn_enabled) return; // earning paused by admin
   const bonus = loyalty.review_bonus ?? 0;
   if (bonus <= 0) return;
 

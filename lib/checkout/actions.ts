@@ -306,7 +306,8 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
       .single();
     const balance = profile?.loyalty_points ?? 0;
     const requested = Math.min(data.loyaltyPointsToRedeem, balance);
-    if (requested > 0) {
+    // Spending paused by admin → ignore any redemption arriving from the client.
+    if (requested > 0 && loyalty.redeem_enabled) {
       const afterDiscountSubtotal = Math.max(0, subtotal - discountAmount);
       const maxByPercent = (afterDiscountSubtotal * loyalty.max_redeem_percent) / 100;
       const perPoint = loyalty.redeem_rate / loyalty.redeem_per_points; // Rs per point

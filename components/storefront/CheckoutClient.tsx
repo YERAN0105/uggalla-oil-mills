@@ -20,6 +20,8 @@ import {
   CalendarDays,
   Clock,
   CheckCircle2,
+  Tag,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +35,12 @@ import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/brand";
 import { formatInColombo } from "@/lib/date";
 import { useCartStore, getSubtotal, computeCouponDiscount } from "@/stores/cart";
-import { createOrder, getSlotAvailabilityAction, checkEmailHasAccount } from "@/lib/checkout/actions";
+import {
+  createOrder,
+  getSlotAvailabilityAction,
+  checkEmailHasAccount,
+  applyCouponAction,
+} from "@/lib/checkout/actions";
 import type {
   DeliveryZone,
   TimeSlot,
@@ -142,7 +149,39 @@ export function CheckoutClient(props: CheckoutClientProps) {
 
   const items = useCartStore((s) => s.items);
   const appliedCoupon = useCartStore((s) => s.appliedCoupon);
+  const setCoupon = useCartStore((s) => s.setCoupon);
   const clearCart = useCartStore((s) => s.clearCart);
+
+  // Coupon entry at checkout — same server action + store the cart's box uses, so
+  // a code can be applied/changed/removed right here at the final step.
+  const [couponInput, setCouponInput] = useState("");
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setApplyingCoupon(true);
+    try {
+      const lines = items.map((i) => ({ productId: i.productId, lineTotal: i.lineTotal }));
+      const result = await applyCouponAction(couponInput, lines);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
+      setCoupon({
+        id: result.coupon.id,
+        code: result.coupon.code,
+        type: result.coupon.type,
+        value: result.coupon.value,
+        min_order_amount: result.coupon.min_order_amount,
+        max_discount: result.coupon.max_discount,
+      });
+      setCouponInput("");
+      toast.success(`Coupon “${result.coupon.code}” applied`);
+    } catch {
+      toast.error("Couldn't apply that coupon. Please try again.");
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
 
   // ─── Form state ───────────────────────────────────────────────────────────
   const [name, setName] = useState(user?.name ?? "");
@@ -211,7 +250,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
       : 0;
 
   const loyaltyDiscount = useMemo(() => {
-    if (!user || loyaltyInput <= 0) return 0;
+    if (!user || loyaltyInput <= 0 || !loyalty.redeem_enabled) return 0;
     const afterDiscount = Math.max(0, subtotal - couponDiscount);
     const perPoint = loyalty.redeem_rate / loyalty.redeem_per_points;
     const maxByPercent = (afterDiscount * loyalty.max_redeem_percent) / 100;
@@ -792,7 +831,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
             </div>
 
             {/* Loyalty redeem */}
-            {user && user.loyaltyPoints > 0 && (
+            {user && user.loyaltyPoints > 0 && loyalty.redeem_enabled && (
               <div className="rounded-xl border border-sage/60 bg-sage/10 p-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="loyalty" className="text-sm text-green-deep">
@@ -817,6 +856,49 @@ export function CheckoutClient(props: CheckoutClientProps) {
                 </p>
               </div>
             )}
+
+            {/* Coupon — apply / change / remove at the final step */}
+            <div className="border-t border-sand pt-4">
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between rounded-lg border border-green/30 bg-green/5 px-3 py-2">
+                  <span className="flex items-center gap-2 text-sm font-medium text-green-deep">
+                    <Tag className="h-3.5 w-3.5 text-green" />
+                    {appliedCoupon.code}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCoupon(null)}
+                    aria-label="Remove coupon"
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Coupon code"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleApplyCoupon();
+                      }
+                    }}
+                    className="uppercase"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleApplyCoupon}
+                    disabled={applyingCoupon}
+                  >
+                    {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
+                  </Button>
+                </div>
+              )}
+            </div>
 
             <div className="space-y-2 border-t border-sand pt-4 text-sm">
               <Row label="Subtotal" value={formatCurrency(subtotal)} />

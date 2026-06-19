@@ -6,6 +6,7 @@ import { Loader2, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { AdminPageHeader, Panel, Field } from "@/components/admin/primitives";
 import { saveLoyaltySettings, adjustLoyaltyByEmail } from "@/lib/admin/loyalty";
 import type { LoyaltySettings } from "@/types/checkout";
@@ -29,6 +30,8 @@ export function LoyaltyClient({
     first_order_bonus: String(settings.first_order_bonus),
     review_bonus: String(settings.review_bonus),
   });
+  const [earnEnabled, setEarnEnabled] = useState(settings.earn_enabled);
+  const [redeemEnabled, setRedeemEnabled] = useState(settings.redeem_enabled);
   const [saving, setSaving] = useState(false);
 
   const [email, setEmail] = useState("");
@@ -39,6 +42,8 @@ export function LoyaltyClient({
   const save = async () => {
     setSaving(true);
     const res = await saveLoyaltySettings({
+      earn_enabled: earnEnabled,
+      redeem_enabled: redeemEnabled,
       earn_rate: Number(form.earn_rate),
       earn_per_amount: Number(form.earn_per_amount),
       redeem_rate: Number(form.redeem_rate),
@@ -82,6 +87,44 @@ export function LoyaltyClient({
       <div className="grid gap-5 lg:grid-cols-3">
         <Panel className="lg:col-span-2">
           <h2 className="mb-4 font-display text-lg font-semibold text-green-deep">Settings</h2>
+
+          {/* Program on/off — earning and spending can be paused independently. */}
+          <div className="mb-5 space-y-3 rounded-xl border border-sand bg-sand/30 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-green-deep">Earning points</p>
+                <p className="text-xs text-muted-foreground">
+                  When off, no new points are earned (delivered orders, review bonus). Existing
+                  balances are kept.
+                </p>
+              </div>
+              <Switch
+                checked={earnEnabled}
+                onCheckedChange={setEarnEnabled}
+                aria-label="Toggle earning points"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-sand pt-3">
+              <div>
+                <p className="text-sm font-medium text-green-deep">Spending points</p>
+                <p className="text-xs text-muted-foreground">
+                  When off, the redeem box is hidden at checkout and points can&apos;t be used.
+                </p>
+              </div>
+              <Switch
+                checked={redeemEnabled}
+                onCheckedChange={setRedeemEnabled}
+                aria-label="Toggle spending points"
+              />
+            </div>
+            {!earnEnabled && redeemEnabled && (
+              <p className="rounded-lg bg-gold/10 px-3 py-2 text-xs text-green-deep">
+                Wind-down mode: customers can still spend the points they already have, but won&apos;t
+                earn new ones.
+              </p>
+            )}
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Earn rate (points)" hint="Points earned per amount below.">
               <Input type="number" value={form.earn_rate} onChange={(e) => set("earn_rate", e.target.value)} />
