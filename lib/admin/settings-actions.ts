@@ -11,6 +11,7 @@ import type {
   NotificationSettings,
   SeoSettings,
   MaintenanceSettings,
+  StorageCleanupSettings,
 } from "@/types/admin";
 import type { ShopInfo, TaxSettings, BankDetails, CodLimits } from "@/types/checkout";
 
@@ -75,4 +76,8 @@ export async function saveSeo(value: SeoSettings): Promise<ActionResult> {
 
 export async function saveMaintenance(value: MaintenanceSettings): Promise<ActionResult> {
   return upsert("maintenance", value);
+}
+
+export async function saveStorageCleanup(value: StorageCleanupSettings): Promise<ActionResult> {
+  return upsert("storage_cleanup", { enabled: !!value.enabled });
 }

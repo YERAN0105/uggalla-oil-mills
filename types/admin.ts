@@ -234,6 +234,11 @@ export interface MaintenanceSettings {
   message: string;
 }
 
+export interface StorageCleanupSettings {
+  /** Weekly auto-sweep of unused public images. Default OFF. */
+  enabled: boolean;
+}
+
 // ─── Activity logs ──────────────────────────────────────────────────────────
 
 export interface AdminActivityLog {

@@ -5,7 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const PUBLIC_MARKER = "/storage/v1/object/public/";
 
 /** Parse the bucket + object path out of a public Storage URL, or null. */
-function parseStorageUrl(url: string): { bucket: string; path: string } | null {
+export function parseStorageUrl(url: string): { bucket: string; path: string } | null {
   const idx = url.indexOf(PUBLIC_MARKER);
   if (idx === -1) return null;
   let rest = url.slice(idx + PUBLIC_MARKER.length);
