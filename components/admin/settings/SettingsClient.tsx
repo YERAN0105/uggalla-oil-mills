@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Panel, Field } from "@/components/admin/primitives";
 import { ImageUpload } from "@/components/admin/ImageUpload";
+import { OrphanCleanup } from "@/components/admin/settings/OrphanCleanup";
 import {
   saveShopInfo,
   saveTax,
@@ -20,6 +21,7 @@ import {
   saveNotifications,
   saveSeo,
   saveMaintenance,
+  saveStorageCleanup,
 } from "@/lib/admin/settings-actions";
 import { NOTIFICATION_EVENTS } from "@/lib/notifications/catalog";
 import type {
@@ -27,6 +29,7 @@ import type {
   NotificationSettings,
   SeoSettings,
   MaintenanceSettings,
+  StorageCleanupSettings,
 } from "@/types/admin";
 import type { ShopInfo, TaxSettings, BankDetails, CodLimits } from "@/types/checkout";
 
@@ -39,6 +42,7 @@ interface Props {
   notifications: NotificationSettings;
   seo: SeoSettings;
   maintenance: MaintenanceSettings;
+  storageCleanup: StorageCleanupSettings;
   payHereEnabled: boolean;
   payHereMode: string | null;
 }
@@ -73,6 +77,7 @@ export function SettingsClient(props: Props) {
           <TabsTrigger value="payment">Payment</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="seo">SEO</TabsTrigger>
+          <TabsTrigger value="storage">Storage</TabsTrigger>
           <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
         </TabsList>
 
@@ -98,6 +103,9 @@ export function SettingsClient(props: Props) {
         </TabsContent>
         <TabsContent value="seo">
           <SeoTab seo={props.seo} />
+        </TabsContent>
+        <TabsContent value="storage">
+          <StorageTab storageCleanup={props.storageCleanup} />
         </TabsContent>
         <TabsContent value="maintenance">
           <MaintenanceTab maintenance={props.maintenance} />
@@ -422,6 +430,45 @@ function SeoTab({ seo }: { seo: SeoSettings }) {
       </div>
       <SaveButton saving={saving} onClick={() => run(() => saveSeo(s))} />
     </Panel>
+  );
+}
+
+function StorageTab({ storageCleanup }: { storageCleanup: StorageCleanupSettings }) {
+  const { saving, run } = useSaver();
+  const [autoEnabled, setAutoEnabled] = useState(storageCleanup.enabled);
+
+  return (
+    <div className="space-y-5">
+      <Panel>
+        <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">Clean up unused images</h2>
+        <p className="mb-3 text-sm text-muted-foreground">
+          Finds orphaned files in the public image buckets (product, brand, category, banner, review
+          and site-asset images) that no longer belong to any product, banner or setting — the kind left
+          behind when an upload is cancelled or an image is replaced before saving. Only files{" "}
+          <strong>older than 24 hours</strong> are listed, so a just-uploaded image is never removed.
+          Payment receipts and bulk-request attachments are never scanned.
+        </p>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Scanning opens a gallery of the unused images — view or delete them individually, or delete
+          them all. Nothing is removed until you confirm.
+        </p>
+        <OrphanCleanup />
+      </Panel>
+
+      <Panel>
+        <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">Weekly automatic cleanup</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          When on, the same cleanup runs automatically once a week, removing unused images older than{" "}
+          <strong>7 days</strong> (a wider safety margin since no one reviews it). Off by default — leave
+          it off until you&apos;ve run the manual cleanup a few times and are happy with what it removes.
+        </p>
+        <label className="flex items-center gap-3 text-sm text-green-deep">
+          <Switch checked={autoEnabled} onCheckedChange={setAutoEnabled} />
+          Enable weekly automatic cleanup
+        </label>
+        <SaveButton saving={saving} onClick={() => run(() => saveStorageCleanup({ enabled: autoEnabled }))} />
+      </Panel>
+    </div>
   );
 }
 
