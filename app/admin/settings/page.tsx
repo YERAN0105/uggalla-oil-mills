@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { getSetting, getShopInfo, getTaxSettings, getBankDetails, getCodLimits } from "@/lib/settings";
+import {
+  getSetting,
+  getShopInfo,
+  getTaxSettings,
+  getBankDetails,
+  getCodLimits,
+  getPickupLimits,
+} from "@/lib/settings";
 import { isPayHereEnabled } from "@/lib/integrations";
 import { SettingsClient } from "@/components/admin/settings/SettingsClient";
 import type {
@@ -14,7 +21,7 @@ import type { ShopInfo } from "@/types/checkout";
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const [shop, tax, frequencies, bank, cod, notifications, seo, maintenance, storageCleanup] =
+  const [shop, tax, frequencies, bank, cod, pickup, notifications, seo, maintenance, storageCleanup] =
     await Promise.all([
       getShopInfo() as Promise<ShopInfo & { logo_url?: string }>,
       getTaxSettings(),
@@ -26,6 +33,7 @@ export default async function SettingsPage() {
       }),
       getBankDetails(),
       getCodLimits(),
+      getPickupLimits(),
       getSetting<NotificationSettings>("notifications", {
         email_enabled: true,
         whatsapp_enabled: true,
@@ -43,6 +51,7 @@ export default async function SettingsPage() {
       frequencies={frequencies}
       bank={bank}
       cod={cod}
+      pickup={pickup}
       notifications={notifications}
       seo={seo}
       maintenance={maintenance}

@@ -9,7 +9,7 @@ import { formatInColombo } from "@/lib/date";
 import { brand } from "@/lib/brand";
 import { signOrderToken } from "@/lib/orders/token";
 import { notify } from "@/lib/notifications";
-import { getCodLimits, getTaxSettings, getLoyaltySettings } from "@/lib/settings";
+import { getCodLimits, getPickupLimits, getTaxSettings, getLoyaltySettings } from "@/lib/settings";
 import { evaluateCoupon, type CouponLine } from "@/lib/checkout/coupon";
 import { createOrderSchema, type CreateOrderInput } from "@/lib/checkout/schema";
 import type { AddressSnapshot } from "@/types/checkout";
@@ -337,15 +337,18 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
   }
   if (data.paymentMethod === "cod") {
     // "cod" is cash on hand-over — Cash on Delivery for delivery orders, Pay at
-    // Store for pickup. The same enabled flag + min/max limits gate both.
-    const cashLabel = data.fulfillmentType === "pickup" ? "Pay at Store" : "Cash on Delivery";
-    const cod = await getCodLimits();
-    if (!cod.enabled) return { ok: false, error: `${cashLabel} is currently unavailable.` };
-    if (cod.min_order_amount && total < cod.min_order_amount) {
-      return { ok: false, error: `${cashLabel} requires a minimum of Rs. ${cod.min_order_amount.toLocaleString()}.` };
+    // Store for pickup. Each is gated by its own limits: delivery carries trip
+    // cost + refusal risk; pickup is paid at the counter and is low-risk. The
+    // stored payment_method stays "cod" either way — only the gate differs.
+    const isPickup = data.fulfillmentType === "pickup";
+    const cashLabel = isPickup ? "Pay at Store" : "Cash on Delivery";
+    const cash = isPickup ? await getPickupLimits() : await getCodLimits();
+    if (!cash.enabled) return { ok: false, error: `${cashLabel} is currently unavailable.` };
+    if (cash.min_order_amount && total < cash.min_order_amount) {
+      return { ok: false, error: `${cashLabel} requires a minimum of Rs. ${cash.min_order_amount.toLocaleString()}.` };
     }
-    if (cod.max_order_amount && total > cod.max_order_amount) {
-      return { ok: false, error: `${cashLabel} is not available for orders over Rs. ${cod.max_order_amount.toLocaleString()}.` };
+    if (cash.max_order_amount && total > cash.max_order_amount) {
+      return { ok: false, error: `${cashLabel} is not available for orders over Rs. ${cash.max_order_amount.toLocaleString()}.` };
     }
   }
 

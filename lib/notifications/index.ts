@@ -14,7 +14,9 @@
 import { createElement } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { brand, formatCurrency } from "@/lib/brand";
+import { getSetting } from "@/lib/settings";
 import type { OrderStatus } from "@/lib/orders/status";
+import type { NotificationSettings } from "@/types/admin";
 import { OrderStatusEmail, type OrderEmailItem } from "@/emails/OrderStatusEmail";
 import { sendEmail } from "./email";
 import { sendWhatsAppTemplate } from "./whatsapp";
@@ -57,6 +59,23 @@ export function eventForStatus(status: string): OrderStatusEvent | null {
     // pending_confirmation is the immediate "order placed" email — excluded here.
     default:
       return null;
+  }
+}
+
+/**
+ * The `notifications.events` settings key that gates an event, or `null` when the
+ * event is critical and always sent (subject only to the master channel switch).
+ * Order-placed (the receipt) and bank-receipt (action-required) are never muteable;
+ * the progress-ping ladder shares one toggle, `order_status_updates`.
+ */
+function eventToggleKey(event: OrderStatusEvent): string | null {
+  switch (event) {
+    case "order_placed":
+    case "bank_receipt_approved":
+    case "bank_receipt_rejected":
+      return null;
+    default:
+      return "order_status_updates";
   }
 }
 
@@ -230,11 +249,28 @@ export async function notify(
   const subject = `${content.heading} — ${payload.orderNumber}`;
   const text = plainText(content, payload);
 
+  // Master per-channel switches (admin → Settings → Notifications). Default ON: a
+  // missing/never-saved row must not silently disable order emails. A switched-off
+  // channel returns `skipped` (NOT `failed`), so the dispatcher treats it as
+  // "nothing to retry" — same path as "no contact on file" — and never loops.
+  const settings = await getSetting<NotificationSettings>("notifications", {
+    email_enabled: true,
+    whatsapp_enabled: true,
+    events: {},
+  });
+  // Per-event toggle (opt-out: only an explicit `false` disables). Critical events
+  // return a null key → always allowed. Applies to both channels equally.
+  const toggleKey = eventToggleKey(event);
+  const eventAllowed = toggleKey === null || settings.events?.[toggleKey] !== false;
+  const emailAllowed = settings.email_enabled !== false && eventAllowed;
+  const whatsappAllowed = settings.whatsapp_enabled !== false && eventAllowed;
+
   const tasks: Promise<NotifyChannelResult>[] = [];
 
   // Email — branded React Email template.
   tasks.push(
     (async (): Promise<NotifyChannelResult> => {
+      if (!emailAllowed) return { channel: "email", status: "skipped", error: "Email disabled in settings" };
       if (!payload.email) return { channel: "email", status: "skipped", error: "No email on file" };
       const react = createElement(OrderStatusEmail, {
         recipientName: payload.recipientName,
@@ -266,6 +302,7 @@ export async function notify(
   // business-initiated messages). Gated by isWhatsAppEnabled inside the sender.
   tasks.push(
     (async (): Promise<NotifyChannelResult> => {
+      if (!whatsappAllowed) return { channel: "whatsapp", status: "skipped", error: "WhatsApp disabled in settings" };
       if (!payload.phone) return { channel: "whatsapp", status: "skipped", error: "No phone on file" };
       const tmpl = whatsAppForEvent(event, payload);
       if (!tmpl) return { channel: "whatsapp", status: "skipped", error: "No WhatsApp template for event" };

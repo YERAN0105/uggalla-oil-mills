@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { nowInColombo } from "@/lib/date";
-import { getCodLimits, getTaxSettings, getLoyaltySettings, getShopInfo } from "@/lib/settings";
+import { getCodLimits, getPickupLimits, getTaxSettings, getLoyaltySettings, getShopInfo } from "@/lib/settings";
 import type {
   DeliveryZone,
   TimeSlot,
@@ -103,4 +103,4 @@ export async function getSlotAvailability(date: string): Promise<Record<string, 
   return remaining;
 }
 
-export { getCodLimits, getTaxSettings, getLoyaltySettings, getShopInfo };
+export { getCodLimits, getPickupLimits, getTaxSettings, getLoyaltySettings, getShopInfo };

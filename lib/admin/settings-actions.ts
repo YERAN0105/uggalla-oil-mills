@@ -13,7 +13,7 @@ import type {
   MaintenanceSettings,
   StorageCleanupSettings,
 } from "@/types/admin";
-import type { ShopInfo, TaxSettings, BankDetails, CodLimits } from "@/types/checkout";
+import type { ShopInfo, TaxSettings, BankDetails, CodLimits, PickupLimits } from "@/types/checkout";
 
 async function upsert(key: string, value: unknown): Promise<ActionResult> {
   const admin = await requireAdmin();
@@ -55,6 +55,14 @@ export async function saveBankDetails(value: BankDetails): Promise<ActionResult>
 
 export async function saveCodLimits(value: CodLimits): Promise<ActionResult> {
   return upsert("cod_limits", {
+    enabled: !!value.enabled,
+    min_order_amount: value.min_order_amount === null ? null : Number(value.min_order_amount),
+    max_order_amount: value.max_order_amount === null ? null : Number(value.max_order_amount),
+  });
+}
+
+export async function savePickupLimits(value: PickupLimits): Promise<ActionResult> {
+  return upsert("pickup_limits", {
     enabled: !!value.enabled,
     min_order_amount: value.min_order_amount === null ? null : Number(value.min_order_amount),
     max_order_amount: value.max_order_amount === null ? null : Number(value.max_order_amount),

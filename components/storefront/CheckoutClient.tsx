@@ -49,6 +49,7 @@ import type {
   TaxSettings,
   LoyaltySettings,
   CodLimits,
+  PickupLimits,
   ShopInfo,
 } from "@/types/checkout";
 
@@ -61,6 +62,7 @@ interface CheckoutClientProps {
   tax: TaxSettings;
   loyalty: LoyaltySettings;
   cod: CodLimits;
+  pickup: PickupLimits;
   shopInfo: ShopInfo;
   payHereEnabled: boolean;
   minLeadTimeHours: number;
@@ -140,7 +142,7 @@ function PhoneInput({
 }
 
 export function CheckoutClient(props: CheckoutClientProps) {
-  const { zones, slots, holidays, user, addresses, tax, loyalty, cod, shopInfo, payHereEnabled, minLeadTimeHours } =
+  const { zones, slots, holidays, user, addresses, tax, loyalty, cod, pickup, shopInfo, payHereEnabled, minLeadTimeHours } =
     props;
   const router = useRouter();
 
@@ -291,12 +293,14 @@ export function CheckoutClient(props: CheckoutClientProps) {
   }, [dateStr, refreshSlots]);
 
   // Cash availability — the same "cash on hand-over" method works for both
-  // delivery (Cash on Delivery) and pickup (Pay at Store); the store's min/max
-  // limits apply to both.
+  // delivery (Cash on Delivery) and pickup (Pay at Store), but each is gated by
+  // its own limits: delivery carries trip cost + refusal risk, pickup is paid
+  // at the counter and is low-risk. Pick the limits for the active fulfillment.
+  const cashLimits = fulfillmentType === "pickup" ? pickup : cod;
   const codAvailable =
-    cod.enabled &&
-    (!cod.min_order_amount || total >= cod.min_order_amount) &&
-    (!cod.max_order_amount || total <= cod.max_order_amount);
+    cashLimits.enabled &&
+    (!cashLimits.min_order_amount || total >= cashLimits.min_order_amount) &&
+    (!cashLimits.max_order_amount || total <= cashLimits.max_order_amount);
 
   // If the current method becomes invalid (e.g. COD on pickup), fall back.
   useEffect(() => {
@@ -404,7 +408,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
   const availablePayments: { id: PaymentMethod; show: boolean }[] = [
     { id: "payhere", show: payHereEnabled },
     { id: "bank_transfer", show: true },
-    { id: "cod", show: cod.enabled },
+    { id: "cod", show: cashLimits.enabled },
   ];
 
   return (

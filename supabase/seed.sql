@@ -1,6 +1,18 @@
 -- ============================================================
 -- Uggalla Oil Mills — Seed Data
--- Run AFTER migrations. Safe to run multiple times (upsert).
+-- Run AFTER migrations.
+--
+-- ⚠️  RE-RUN WARNING: this file UPSERTs, so re-running it OVERWRITES
+--     existing rows back to these seed values. It is safe on a fresh
+--     DB, but on a live DB it will WIPE admin-edited brands, categories,
+--     delivery zones, time slots, and ESPECIALLY every row in `settings`
+--     (shop_info, bank_details, tax, loyalty, cod_limits, notifications…)
+--     back to the placeholders below. Orders/products/customers are NOT
+--     in this file and are untouched.
+--
+--     To add a SINGLE new row to a live DB without clobbering anything,
+--     write a one-off `insert … on conflict (key) do nothing;` instead of
+--     re-running this whole file. See the `pickup_limits` note below.
 -- ============================================================
 
 -- ─── Brand: Royal Coco ───────────────────────────────────────────────────────
@@ -97,6 +109,17 @@ on conflict (id) do update set
   is_active = excluded.is_active;
 
 -- ─── Settings ────────────────────────────────────────────────────────────────
+-- ⚠️  DESTRUCTIVE ON RE-RUN: the `on conflict (key) do update` at the end of this
+--     block overwrites EVERY settings row below with these seed values. On a live
+--     DB this resets admin-customized shop_info / bank_details / tax / loyalty /
+--     cod_limits / pickup_limits / notifications. Do NOT re-run this block to add a
+--     new key — instead run a targeted `do nothing` insert, e.g. for pickup_limits:
+--
+--       insert into public.settings (key, value)
+--       values ('pickup_limits',
+--         '{"min_order_amount": null, "max_order_amount": null, "enabled": true}')
+--       on conflict (key) do nothing;
+--
 insert into public.settings (key, value)
 values
   (
@@ -144,6 +167,14 @@ values
     'cod_limits',
     '{
       "min_order_amount": 500,
+      "max_order_amount": null,
+      "enabled": true
+    }'
+  ),
+  (
+    'pickup_limits',
+    '{
+      "min_order_amount": null,
       "max_order_amount": null,
       "enabled": true
     }'

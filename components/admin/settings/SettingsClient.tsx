@@ -18,6 +18,7 @@ import {
   saveSubscriptionFrequencies,
   saveBankDetails,
   saveCodLimits,
+  savePickupLimits,
   saveNotifications,
   saveSeo,
   saveMaintenance,
@@ -31,7 +32,7 @@ import type {
   MaintenanceSettings,
   StorageCleanupSettings,
 } from "@/types/admin";
-import type { ShopInfo, TaxSettings, BankDetails, CodLimits } from "@/types/checkout";
+import type { ShopInfo, TaxSettings, BankDetails, CodLimits, PickupLimits } from "@/types/checkout";
 
 interface Props {
   shop: ShopInfo & { logo_url?: string };
@@ -39,6 +40,7 @@ interface Props {
   frequencies: SubscriptionFrequencies;
   bank: BankDetails;
   cod: CodLimits;
+  pickup: PickupLimits;
   notifications: NotificationSettings;
   seo: SeoSettings;
   maintenance: MaintenanceSettings;
@@ -94,6 +96,7 @@ export function SettingsClient(props: Props) {
           <PaymentTab
             bank={props.bank}
             cod={props.cod}
+            pickup={props.pickup}
             payHereEnabled={props.payHereEnabled}
             payHereMode={props.payHereMode}
           />
@@ -232,11 +235,13 @@ function SubsTab({ frequencies }: { frequencies: SubscriptionFrequencies }) {
 function PaymentTab({
   bank,
   cod,
+  pickup,
   payHereEnabled,
   payHereMode,
 }: {
   bank: BankDetails;
   cod: CodLimits;
+  pickup: PickupLimits;
   payHereEnabled: boolean;
   payHereMode: string | null;
 }) {
@@ -246,6 +251,11 @@ function PaymentTab({
     enabled: cod.enabled,
     min: cod.min_order_amount != null ? String(cod.min_order_amount) : "",
     max: cod.max_order_amount != null ? String(cod.max_order_amount) : "",
+  });
+  const [pk, setPk] = useState({
+    enabled: pickup.enabled,
+    min: pickup.min_order_amount != null ? String(pickup.min_order_amount) : "",
+    max: pickup.max_order_amount != null ? String(pickup.max_order_amount) : "",
   });
   return (
     <div className="space-y-5">
@@ -288,7 +298,11 @@ function PaymentTab({
       </Panel>
 
       <Panel>
-        <h2 className="mb-3 font-display text-lg font-semibold text-green-deep">Cash on Delivery</h2>
+        <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">Cash on Delivery</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Cash paid when a <strong>delivery</strong> order arrives. Limits guard against the trip cost
+          of tiny orders and the refusal risk of large ones. Store-pickup cash is set separately below.
+        </p>
         <label className="flex items-center gap-3 text-sm text-green-deep">
           <Switch checked={c.enabled} onCheckedChange={(v) => setC((s) => ({ ...s, enabled: v }))} />
           Enable Cash on Delivery
@@ -309,6 +323,38 @@ function PaymentTab({
                 enabled: c.enabled,
                 min_order_amount: c.min === "" ? null : Number(c.min),
                 max_order_amount: c.max === "" ? null : Number(c.max),
+              })
+            )
+          }
+        />
+      </Panel>
+
+      <Panel>
+        <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">Pay at Store</h2>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Cash paid at the counter when a <strong>pickup</strong> order is collected. This is low-risk
+          (paid before goods leave), so limits are usually left blank — leave both empty for no limit.
+        </p>
+        <label className="flex items-center gap-3 text-sm text-green-deep">
+          <Switch checked={pk.enabled} onCheckedChange={(v) => setPk((s) => ({ ...s, enabled: v }))} />
+          Enable Pay at Store
+        </label>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <Field label="Min order amount (blank = none)">
+            <Input type="number" value={pk.min} onChange={(e) => setPk((s) => ({ ...s, min: e.target.value }))} />
+          </Field>
+          <Field label="Max order amount (blank = none)">
+            <Input type="number" value={pk.max} onChange={(e) => setPk((s) => ({ ...s, max: e.target.value }))} />
+          </Field>
+        </div>
+        <SaveButton
+          saving={saving}
+          onClick={() =>
+            run(() =>
+              savePickupLimits({
+                enabled: pk.enabled,
+                min_order_amount: pk.min === "" ? null : Number(pk.min),
+                max_order_amount: pk.max === "" ? null : Number(pk.max),
               })
             )
           }
@@ -360,8 +406,8 @@ function NotificationsTab({ notifications }: { notifications: NotificationSettin
       <Panel>
         <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">Per-event</h2>
         <p className="mb-3 text-xs text-muted-foreground">
-          Turn individual customer notifications on or off. Order-status &amp; payment emails are
-          debounced and always follow the master Email switch above.
+          Turn individual customer notifications on or off. Each still requires its channel&apos;s
+          master switch above to be on.
         </p>
         <div className="space-y-4">
           {transactional.map((e) => (
@@ -382,22 +428,37 @@ function NotificationsTab({ notifications }: { notifications: NotificationSettin
       </Panel>
 
       <Panel>
-        <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">WhatsApp templates (reference)</h2>
+        <h2 className="mb-1 font-display text-lg font-semibold text-green-deep">Order notifications</h2>
         <p className="mb-3 text-xs text-muted-foreground">
-          These templates are immutable — create and get them approved in the Meta WhatsApp Manager
-          (see docs/WHATSAPP_SETUP.md). Variable order must match.
+          Sent automatically as an order progresses (debounced). These also follow the master
+          Email/WhatsApp switches above. <strong>Order placed</strong> (the customer&apos;s receipt) and{" "}
+          <strong>Bank receipt</strong> (action-required) are always on so an order is never left
+          silently stalled.
         </p>
-        <div className="space-y-2">
-          {orderStatus.map((e) => (
-            <div key={e.key} className="rounded-lg bg-sand/60 px-3 py-2">
-              <p className="text-sm font-medium text-green-deep">{e.label}</p>
-              <p className="text-[11px] text-muted-foreground">
-                <code className="rounded bg-white px-1">{e.whatsappTemplate}</code> ·
-                {" "}variables: {e.whatsappVars.map((v) => `{{${v}}}`).join(", ")}
-              </p>
-            </div>
-          ))}
+        <div className="space-y-4">
+          {orderStatus.map((e) => {
+            const toggleable = e.key === "order_status_updates";
+            return (
+              <div key={e.key} className="flex items-start justify-between gap-4 border-b border-border pb-3 last:border-0 last:pb-0">
+                <div>
+                  <p className="text-sm font-medium text-green-deep">{e.label}</p>
+                  <p className="text-xs text-muted-foreground">{e.description}</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    WhatsApp template: <code className="rounded bg-sand px-1">{e.whatsappTemplate}</code>
+                  </p>
+                </div>
+                {toggleable ? (
+                  <Switch checked={eventOn(e.key)} onCheckedChange={(v) => setEvent(e.key, v)} />
+                ) : (
+                  <span className="shrink-0 rounded-full bg-sand px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    Always on
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
+        <SaveButton saving={saving} onClick={() => run(() => saveNotifications(n))} />
       </Panel>
     </div>
   );
