@@ -6,6 +6,7 @@ import {
   getHolidayDates,
   getCheckoutUser,
   getCodLimits,
+  getPickupLimits,
   getTaxSettings,
   getLoyaltySettings,
   getShopInfo,
@@ -19,16 +20,18 @@ export const metadata: Metadata = { title: "Checkout" };
 export const dynamic = "force-dynamic";
 
 export default async function CheckoutPage() {
-  const [zones, slots, holidays, { user, addresses }, cod, tax, loyalty, shopInfo] = await Promise.all([
-    getDeliveryZones(),
-    getTimeSlots(),
-    getHolidayDates(),
-    getCheckoutUser(),
-    getCodLimits(),
-    getTaxSettings(),
-    getLoyaltySettings(),
-    getShopInfo(),
-  ]);
+  const [zones, slots, holidays, { user, addresses }, cod, pickup, tax, loyalty, shopInfo] =
+    await Promise.all([
+      getDeliveryZones(),
+      getTimeSlots(),
+      getHolidayDates(),
+      getCheckoutUser(),
+      getCodLimits(),
+      getPickupLimits(),
+      getTaxSettings(),
+      getLoyaltySettings(),
+      getShopInfo(),
+    ]);
 
   return (
     <section className="bg-cream min-h-screen">
@@ -41,6 +44,7 @@ export default async function CheckoutPage() {
         tax={tax}
         loyalty={loyalty}
         cod={cod}
+        pickup={pickup}
         shopInfo={shopInfo}
         payHereEnabled={isPayHereEnabled}
         minLeadTimeHours={brand.minLeadTimeHours}

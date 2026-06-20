@@ -3,6 +3,7 @@ import type {
   TaxSettings,
   LoyaltySettings,
   CodLimits,
+  PickupLimits,
   BankDetails,
   ShopInfo,
 } from "@/types/checkout";
@@ -25,6 +26,14 @@ const DEFAULT_LOYALTY: LoyaltySettings = {
 
 const DEFAULT_COD: CodLimits = {
   min_order_amount: 500,
+  max_order_amount: null,
+  enabled: true,
+};
+
+// Pay-at-Store defaults to no limits: the customer pays cash at the counter
+// before taking goods, so there's no delivery cost or refusal risk to gate.
+const DEFAULT_PICKUP: PickupLimits = {
+  min_order_amount: null,
   max_order_amount: null,
   enabled: true,
 };
@@ -64,6 +73,10 @@ export async function getCodLimits(): Promise<CodLimits> {
   return getSetting<CodLimits>("cod_limits", DEFAULT_COD);
 }
 
+export async function getPickupLimits(): Promise<PickupLimits> {
+  return getSetting<PickupLimits>("pickup_limits", DEFAULT_PICKUP);
+}
+
 export async function getBankDetails(): Promise<BankDetails> {
   // bank_details may not be seeded; fall back to placeholders.
   return getSetting<BankDetails>("bank_details", DEFAULT_BANK);
@@ -79,4 +92,4 @@ export async function getShopInfo(): Promise<ShopInfo> {
   });
 }
 
-export { DEFAULT_TAX, DEFAULT_LOYALTY, DEFAULT_COD, DEFAULT_BANK };
+export { DEFAULT_TAX, DEFAULT_LOYALTY, DEFAULT_COD, DEFAULT_PICKUP, DEFAULT_BANK };

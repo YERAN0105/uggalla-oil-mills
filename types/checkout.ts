@@ -70,6 +70,14 @@ export interface CodLimits {
   enabled: boolean;
 }
 
+/**
+ * Pay-at-Store (pickup) cash limits. Same shape as {@link CodLimits} but a
+ * separate setting (`pickup_limits`): pickup is paid face-to-face at the
+ * counter, so it carries none of COD's delivery/refusal risk and is gated
+ * independently — defaults to no limits.
+ */
+export type PickupLimits = CodLimits;
+
 export interface BankDetails {
   bank_name: string;
   account_name: string;
