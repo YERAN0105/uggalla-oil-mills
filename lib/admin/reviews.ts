@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin/guard";
 import { logActivity } from "@/lib/admin/activity";
 import { getLoyaltySettings } from "@/lib/settings";
+import { deletePublicImages } from "@/lib/admin/storage";
 import type { ActionResult } from "@/types/admin";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -67,8 +68,10 @@ export async function setReviewStatus(
 export async function deleteReview(id: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   const db = createAdminClient();
+  const { data: imgs } = await db.from("review_images").select("url").eq("review_id", id);
   const { error } = await db.from("reviews").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
+  await deletePublicImages(((imgs as { url: string }[]) ?? []).map((r) => r.url));
   await logActivity(admin.id, { action: "review.delete", targetTable: "reviews", targetId: id });
   revalidate();
   return { ok: true };

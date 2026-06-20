@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin/guard";
 import { logActivity } from "@/lib/admin/activity";
 import { categorySchema } from "@/lib/admin/schemas";
+import { deletePublicImage, deleteReplacedImage } from "@/lib/admin/storage";
 import type { ActionResult } from "@/types/admin";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -37,8 +38,10 @@ export async function saveCategory(
   };
 
   if (id) {
+    const { data: prev } = await db.from("categories").select("image_url").eq("id", id).maybeSingle();
     const { error } = await db.from("categories").update(row).eq("id", id);
     if (error) return { ok: false, error: error.message };
+    await deleteReplacedImage((prev as { image_url: string | null } | null)?.image_url, row.image_url);
     await logActivity(admin.id, { action: "category.update", targetTable: "categories", targetId: id, metadata: { name: d.name } });
     revalidateCategories();
     return { ok: true, data: { id } };
@@ -66,8 +69,10 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   if ((count ?? 0) > 0) {
     return { ok: false, error: "Reassign or remove its products before deleting this category." };
   }
+  const { data: existing } = await db.from("categories").select("image_url").eq("id", id).maybeSingle();
   const { error } = await db.from("categories").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
+  await deletePublicImage((existing as { image_url: string | null } | null)?.image_url);
   await logActivity(admin.id, { action: "category.delete", targetTable: "categories", targetId: id });
   revalidateCategories();
   return { ok: true };

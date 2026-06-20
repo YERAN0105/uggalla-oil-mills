@@ -20,33 +20,10 @@ import { DropletSVG } from "@/components/shared/DropletSVG";
 import { NewsletterForm } from "@/components/storefront/NewsletterForm";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { JsonLd } from "@/components/shared/JsonLd";
-import { getProducts } from "@/lib/products";
+import { getProducts, getCategories } from "@/lib/products";
+import { getHeroBanners } from "@/lib/banners";
+import { HeroCarousel, type HeroSlide } from "@/components/storefront/HeroCarousel";
 import { brand } from "@/lib/brand";
-
-const categories = [
-  {
-    slug: "bottles",
-    name: "Bottles",
-    description: "Measured volumes for every home",
-    image: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=600&q=80",
-    href: "/shop/category/bottles",
-  },
-  {
-    slug: "packets",
-    name: "Packets",
-    description: "Convenient sachets & pouches",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
-    href: "/shop/category/packets",
-  },
-  {
-    slug: "bulk",
-    name: "Bulk / Loose",
-    description: "For restaurants & industries",
-    image: "https://images.unsplash.com/photo-1503792243040-7ce7f5f06085?w=600&q=80",
-    href: "/shop/category/bulk",
-    isBulk: true,
-  },
-];
 
 const trustPoints = [
   {
@@ -119,6 +96,37 @@ export default async function HomePage() {
     const fallback = await getProducts({ pageSize: 4 });
     featuredProducts = fallback.products;
   }
+  // Category showcase comes from the database (Admin → Categories). getCategories()
+  // already filters to active only, so hidden categories drop off automatically.
+  const categories = (await getCategories()).map((c) => ({
+    slug: c.slug,
+    name: c.name,
+    description: c.description,
+    image: c.image_url,
+    href: `/shop/category/${c.slug}`,
+    isBulk: c.is_bulk,
+  }));
+
+  // Hero slideshow from Admin → Banners (active "hero" banners, in order). Falls
+  // back to a single built-in default slide when there are none. Each field falls
+  // back independently, so a banner can change just the image, just the text, etc.
+  const DEFAULT_HERO_SUB =
+    "Naturally pressed at our mill in Padukka since generations. From our coconut groves to your kitchen — pure, fresh, and full of flavour.";
+  const heroBanners = await getHeroBanners();
+  const heroSlides: HeroSlide[] =
+    heroBanners.length > 0
+      ? heroBanners.map((b) => {
+          const hasCta = !!(b.cta_text?.trim() && b.cta_link?.trim());
+          return {
+            image: b.image_url || "/hero.jpeg",
+            headline: b.headline?.trim() || null,
+            subheadline: b.subheadline?.trim() || DEFAULT_HERO_SUB,
+            ctaText: hasCta ? b.cta_text!.trim() : "Shop Now",
+            ctaLink: hasCta ? b.cta_link!.trim() : "/shop",
+          };
+        })
+      : [{ image: "/hero.jpeg", headline: null, subheadline: DEFAULT_HERO_SUB, ctaText: "Shop Now", ctaLink: "/shop" }];
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const websiteLd = {
     "@context": "https://schema.org",
@@ -135,72 +143,8 @@ export default async function HomePage() {
   return (
     <>
       <JsonLd data={websiteLd} />
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-green-deep" aria-label="Hero">
-        {/* Background image */}
-        <div className="absolute inset-0">
-          <Image
-            src="/hero.jpeg"
-            alt="Uggalla Oil Mills shop in Padukka, Sri Lanka"
-            fill
-            className="object-cover object-center opacity-40"
-            priority
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-green-deep/90 via-green-deep/60 to-transparent" />
-        </div>
-
-        {/* Decorative droplet */}
-        <div className="absolute right-8 top-1/4 opacity-10 hidden lg:block" aria-hidden="true">
-          <DropletSVG size={300} className="text-gold" />
-        </div>
-
-        <Container className="relative z-10 py-24">
-          <div className="max-w-2xl">
-            <FadeIn delay={0}>
-              <span className="text-eyebrow text-gold/80 mb-4 block">
-                Pure · Natural · Premium
-              </span>
-            </FadeIn>
-            <FadeIn delay={0.1}>
-              <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
-                Sri Lanka&apos;s finest
-                <span className="block text-gold">coconut oil</span>
-              </h1>
-            </FadeIn>
-            <FadeIn delay={0.2}>
-              <p className="text-lg text-white/70 mb-8 max-w-lg leading-relaxed">
-                Naturally pressed at our mill in Padukka since generations. From our coconut groves
-                to your kitchen — pure, fresh, and full of flavour.
-              </p>
-            </FadeIn>
-            <FadeIn delay={0.3}>
-              <div className="flex flex-wrap gap-4">
-                <Button size="xl" variant="gold" asChild>
-                  <Link href="/shop">
-                    Shop Now <ChevronRight className="h-5 w-5" />
-                  </Link>
-                </Button>
-                <Button
-                  size="xl"
-                  variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10 hover:text-white hover:border-white/50"
-                  asChild
-                >
-                  <Link href="/about">Our Story</Link>
-                </Button>
-              </div>
-            </FadeIn>
-          </div>
-        </Container>
-
-        {/* Bottom wave */}
-        <div className="absolute bottom-0 left-0 right-0" aria-hidden="true">
-          <svg viewBox="0 0 1440 60" className="w-full fill-cream" preserveAspectRatio="none">
-            <path d="M0,0 C480,60 960,60 1440,0 L1440,60 L0,60 Z" />
-          </svg>
-        </div>
-      </section>
+      {/* ── Hero (slideshow from Admin → Banners) ─────────────────────────── */}
+      <HeroCarousel slides={heroSlides} />
 
       {/* ── Brand Story Strip ─────────────────────────────────────────────── */}
       <section className="py-16 bg-cream" aria-label="Our mill">
@@ -261,55 +205,66 @@ export default async function HomePage() {
       </section>
 
       {/* ── Category Showcase ─────────────────────────────────────────────── */}
-      <section className="py-16 bg-sand" aria-label="Product categories">
-        <Container>
-          <FadeIn>
-            <div className="text-center mb-10">
-              <span className="text-eyebrow mb-2 block">Our Products</span>
-              <h2 className="font-display text-4xl text-green-deep">
-                Choose your format
-              </h2>
-            </div>
-          </FadeIn>
+      {categories.length > 0 && (
+        <section className="py-16 bg-sand" aria-label="Product categories">
+          <Container>
+            <FadeIn>
+              <div className="text-center mb-10">
+                <span className="text-eyebrow mb-2 block">Our Products</span>
+                <h2 className="font-display text-4xl text-green-deep">
+                  Choose your format
+                </h2>
+              </div>
+            </FadeIn>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categories.map((cat, i) => (
-              <FadeIn key={cat.slug} delay={i * 0.1}>
-                <Link
-                  href={cat.href}
-                  className="group block rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 bg-white"
-                >
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    <Image
-                      src={cat.image}
-                      alt={cat.name}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-green-deep/60 to-transparent" />
-                    {cat.isBulk && (
-                      <div className="absolute top-3 right-3">
-                        <Badge variant="gold">Get a Quote</Badge>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {categories.map((cat, i) => (
+                <FadeIn key={cat.slug} delay={i * 0.1}>
+                  <Link
+                    href={cat.href}
+                    className="group block rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 bg-white"
+                  >
+                    <div className="relative aspect-[4/3] overflow-hidden">
+                      {cat.image ? (
+                        <Image
+                          src={cat.image}
+                          alt={cat.name}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
+                      ) : (
+                        // Fallback when a category has no image uploaded yet.
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-sage to-green/40">
+                          <DropletSVG className="h-16 w-16 text-white/50" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-green-deep/60 to-transparent" />
+                      {cat.isBulk && (
+                        <div className="absolute top-3 right-3">
+                          <Badge variant="gold">Get a Quote</Badge>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                        <h3 className="font-display text-xl font-semibold text-white">{cat.name}</h3>
+                        {cat.description && (
+                          <p className="text-white/70 text-sm">{cat.description}</p>
+                        )}
                       </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 p-5">
-                      <h3 className="font-display text-xl font-semibold text-white">{cat.name}</h3>
-                      <p className="text-white/70 text-sm">{cat.description}</p>
                     </div>
-                  </div>
-                  <div className="p-4 flex items-center justify-between">
-                    <span className="text-sm font-medium text-green">
-                      {cat.isBulk ? "Browse & request quote" : "Browse products"}
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-green transition-transform group-hover:translate-x-1" />
-                  </div>
-                </Link>
-              </FadeIn>
-            ))}
-          </div>
-        </Container>
-      </section>
+                    <div className="p-4 flex items-center justify-between">
+                      <span className="text-sm font-medium text-green">
+                        {cat.isBulk ? "Browse & request quote" : "Browse products"}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-green transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </Link>
+                </FadeIn>
+              ))}
+            </div>
+          </Container>
+        </section>
+      )}
 
       {/* ── Featured Products placeholder ─────────────────────────────────── */}
       <section className="py-16 bg-cream" aria-label="Featured products">

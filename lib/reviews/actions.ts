@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deletePublicImages } from "@/lib/admin/storage";
 import { reviewSchema } from "@/lib/account/schema";
 
 type Result = { ok: true } | { ok: false; error: string; fieldErrors?: Record<string, string[]> };
@@ -143,12 +144,23 @@ export async function deleteReview(reviewId: string): Promise<Result> {
   const user = await requireUser();
   if (!user) return { ok: false, error: "Please sign in." };
   const admin = createAdminClient();
+  // Confirm ownership BEFORE touching any files, so a stranger's reviewId can
+  // never trigger deletion of someone else's review photos.
+  const { data: own } = await admin
+    .from("reviews")
+    .select("id")
+    .eq("id", reviewId)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (!own) return { ok: false, error: "Review not found." };
+  const { data: imgs } = await admin.from("review_images").select("url").eq("review_id", reviewId);
   const { error } = await admin
     .from("reviews")
     .delete()
     .eq("id", reviewId)
     .eq("user_id", user.id);
   if (error) return { ok: false, error: "Could not delete the review." };
+  await deletePublicImages(((imgs as { url: string }[]) ?? []).map((r) => r.url));
   revalidatePath("/account/reviews");
   return { ok: true };
 }
