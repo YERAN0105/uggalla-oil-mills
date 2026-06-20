@@ -9,6 +9,7 @@ import { MaintenanceGate } from "@/components/storefront/MaintenanceGate";
 import { getCategories } from "@/lib/products";
 import { getPromoBanner } from "@/lib/banners";
 import { getShopInfo } from "@/lib/settings";
+import { getAdminUser } from "@/lib/admin/guard";
 import { brand } from "@/lib/brand";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -17,11 +18,13 @@ export default async function StorefrontLayout({ children }: { children: React.R
   const gate = await MaintenanceGate();
   if (gate) return gate;
 
-  const [categories, promo, shopInfo] = await Promise.all([
+  const [categories, promo, shopInfo, adminUser] = await Promise.all([
     getCategories(),
     getPromoBanner(),
     getShopInfo(),
+    getAdminUser(),
   ]);
+  const isAdmin = adminUser !== null;
 
   const organizationLd = {
     "@context": "https://schema.org",
@@ -45,7 +48,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
       >
         Skip to content
       </a>
-      <Header categories={categories} promo={promo} />
+      <Header categories={categories} promo={promo} isAdmin={isAdmin} />
       <main className="flex-1" id="main-content">
         {children}
       </main>

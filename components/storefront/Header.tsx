@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
-import { Menu, X, Heart, User, ChevronDown, Package, LogOut } from "lucide-react";
+import { Menu, X, Heart, User, ChevronDown, Package, LogOut, LayoutDashboard } from "lucide-react";
 import { BrandLogo } from "@/components/shared/BrandLogo";
 import { Container } from "@/components/shared/Container";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,15 @@ export type NavCategory = { name: string; slug: string };
 /** Active promo strip for the top bar, or null to use the default message. */
 export type HeaderPromo = { headline: string | null; cta_text: string | null; cta_link: string | null } | null;
 
-export function Header({ categories, promo }: { categories: NavCategory[]; promo?: HeaderPromo }) {
+export function Header({
+  categories,
+  promo,
+  isAdmin = false,
+}: {
+  categories: NavCategory[];
+  promo?: HeaderPromo;
+  isAdmin?: boolean;
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -199,7 +207,7 @@ export function Header({ categories, promo }: { categories: NavCategory[]; promo
               </Button>
 
               {/* Account avatar / menu */}
-              <AccountMenu user={user} />
+              <AccountMenu user={user} isAdmin={isAdmin} />
 
               {/* Cart drawer trigger */}
               <CartButton />
@@ -303,6 +311,13 @@ export function Header({ categories, promo }: { categories: NavCategory[]; promo
               <div className="p-5 border-t border-sand flex flex-col gap-2">
                 {user ? (
                   <>
+                    {isAdmin && (
+                      <Button className="w-full justify-start gap-2" asChild>
+                        <Link href="/admin">
+                          <LayoutDashboard className="h-4 w-4" /> Admin Dashboard
+                        </Link>
+                      </Button>
+                    )}
                     <Button variant="outline" className="w-full justify-start gap-2" asChild>
                       <Link href="/account">
                         <User className="h-4 w-4" /> My Account
