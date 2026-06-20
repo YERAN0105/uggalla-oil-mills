@@ -5,10 +5,28 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin/guard";
 import { logActivity } from "@/lib/admin/activity";
 import { productSchema } from "@/lib/admin/schemas";
+import { deletePublicImages } from "@/lib/admin/storage";
 import { slugify } from "@/lib/utils";
 import type { ActionResult } from "@/types/admin";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/**
+ * Remove product-image files from storage, but only those no longer referenced
+ * by ANY remaining product_images row. A duplicated product shares the same file
+ * (duplicateProduct copies the url), so we must not delete a file the copy still
+ * uses. Call AFTER the rows are deleted. Best-effort.
+ */
+async function cleanupOrphanProductImages(
+  db: ReturnType<typeof createAdminClient>,
+  urls: (string | null | undefined)[]
+): Promise<void> {
+  const unique = [...new Set(urls.filter((u): u is string => !!u))];
+  if (unique.length === 0) return;
+  const { data: stillUsed } = await db.from("product_images").select("url").in("url", unique);
+  const used = new Set(((stillUsed as { url: string }[]) ?? []).map((r) => r.url));
+  await deletePublicImages(unique.filter((u) => !used.has(u)));
+}
 
 function revalidateProducts(slug?: string) {
   revalidatePath("/admin/products");
@@ -121,8 +139,13 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     if (error) return { ok: false, error: error.message };
     await logActivity(admin.id, { action: "product.soft_delete", targetTable: "products", targetId: id });
   } else {
+    // Hard delete — grab image URLs first (cascade removes product_images rows),
+    // then clean up any files no longer referenced by another product.
+    const { data: imgs } = await db.from("product_images").select("url").eq("product_id", id);
+    const urls = ((imgs as { url: string }[]) ?? []).map((r) => r.url);
     const { error } = await db.from("products").delete().eq("id", id);
     if (error) return { ok: false, error: error.message };
+    await cleanupOrphanProductImages(db, urls);
     await logActivity(admin.id, { action: "product.delete", targetTable: "products", targetId: id });
   }
   revalidateProducts();
@@ -283,11 +306,14 @@ export async function deleteProductImage(imageId: string, productId: string): Pr
   const db = createAdminClient();
   const { data: img } = await db
     .from("product_images")
-    .select("is_primary")
+    .select("is_primary, url")
     .eq("id", imageId)
     .maybeSingle();
   const { error } = await db.from("product_images").delete().eq("id", imageId);
   if (error) return { ok: false, error: error.message };
+
+  // Remove the file unless another product (a duplicate) still references it.
+  await cleanupOrphanProductImages(db, [(img as any)?.url]);
 
   // If we removed the primary, promote the first remaining image.
   if ((img as any)?.is_primary) {

@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin/guard";
 import { logActivity } from "@/lib/admin/activity";
 import { brandSchema } from "@/lib/admin/schemas";
+import { deletePublicImage, deleteReplacedImage } from "@/lib/admin/storage";
 import type { ActionResult } from "@/types/admin";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -34,8 +35,10 @@ export async function saveBrand(input: unknown, id?: string): Promise<ActionResu
   };
 
   if (id) {
+    const { data: prev } = await db.from("brands").select("image_url").eq("id", id).maybeSingle();
     const { error } = await db.from("brands").update(row).eq("id", id);
     if (error) return { ok: false, error: error.message };
+    await deleteReplacedImage((prev as { image_url: string | null } | null)?.image_url, row.image_url);
     await logActivity(admin.id, { action: "brand.update", targetTable: "brands", targetId: id, metadata: { name: d.name } });
     revalidateBrands();
     return { ok: true, data: { id } };
@@ -54,8 +57,10 @@ export async function saveBrand(input: unknown, id?: string): Promise<ActionResu
 export async function deleteBrand(id: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   const db = createAdminClient();
+  const { data: existing } = await db.from("brands").select("image_url").eq("id", id).maybeSingle();
   const { error } = await db.from("brands").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
+  await deletePublicImage((existing as { image_url: string | null } | null)?.image_url);
   await logActivity(admin.id, { action: "brand.delete", targetTable: "brands", targetId: id });
   revalidateBrands();
   return { ok: true };

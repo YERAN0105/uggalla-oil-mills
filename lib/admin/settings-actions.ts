@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/admin/guard";
 import { logActivity } from "@/lib/admin/activity";
+import { deleteReplacedImage } from "@/lib/admin/storage";
 import type { ActionResult } from "@/types/admin";
 import type {
   SubscriptionFrequencies,
@@ -25,7 +26,12 @@ async function upsert(key: string, value: unknown): Promise<ActionResult> {
 }
 
 export async function saveShopInfo(value: ShopInfo & { logo_url?: string }): Promise<ActionResult> {
-  return upsert("shop_info", value);
+  const db = createAdminClient();
+  const { data: prev } = await db.from("settings").select("value").eq("key", "shop_info").maybeSingle();
+  const oldLogo = (prev?.value as { logo_url?: string } | null)?.logo_url ?? null;
+  const res = await upsert("shop_info", value);
+  if (res.ok) await deleteReplacedImage(oldLogo, value.logo_url ?? null);
+  return res;
 }
 
 export async function saveTax(value: TaxSettings): Promise<ActionResult> {
@@ -59,7 +65,12 @@ export async function saveNotifications(value: NotificationSettings): Promise<Ac
 }
 
 export async function saveSeo(value: SeoSettings): Promise<ActionResult> {
-  return upsert("seo", value);
+  const db = createAdminClient();
+  const { data: prev } = await db.from("settings").select("value").eq("key", "seo").maybeSingle();
+  const oldOg = (prev?.value as { og_image_url?: string } | null)?.og_image_url ?? null;
+  const res = await upsert("seo", value);
+  if (res.ok) await deleteReplacedImage(oldOg, value.og_image_url ?? null);
+  return res;
 }
 
 export async function saveMaintenance(value: MaintenanceSettings): Promise<ActionResult> {

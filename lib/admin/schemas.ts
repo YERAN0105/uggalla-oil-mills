@@ -79,18 +79,29 @@ export const couponSchema = z
   });
 export type CouponInput = z.infer<typeof couponSchema>;
 
-export const bannerSchema = z.object({
-  image_url: z.string().url().optional().or(z.literal("")),
-  headline: z.string().max(120).optional().or(z.literal("")),
-  subheadline: z.string().max(240).optional().or(z.literal("")),
-  cta_text: z.string().max(60).optional().or(z.literal("")),
-  cta_link: z.string().max(300).optional().or(z.literal("")),
-  position: z.enum(["hero", "promo"]).default("hero"),
-  display_order: z.coerce.number().int().min(0).default(0),
-  valid_from: z.string().nullable().optional(),
-  valid_until: z.string().nullable().optional(),
-  is_active: z.boolean().default(true),
-});
+export const bannerSchema = z
+  .object({
+    image_url: z.string().url().optional().or(z.literal("")),
+    headline: z.string().max(120).optional().or(z.literal("")),
+    subheadline: z.string().max(240).optional().or(z.literal("")),
+    cta_text: z.string().max(60).optional().or(z.literal("")),
+    cta_link: z.string().max(300).optional().or(z.literal("")),
+    position: z.enum(["hero", "promo"]).default("hero"),
+    display_order: z.coerce.number().int().min(0).default(0),
+    valid_from: z.string().nullable().optional(),
+    valid_until: z.string().nullable().optional(),
+    is_active: z.boolean().default(true),
+  })
+  // A promo strip is just a line of text — its message (headline) is required.
+  .superRefine((data, ctx) => {
+    if (data.position === "promo" && !data.headline?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["headline"],
+        message: "A promo strip needs a message.",
+      });
+    }
+  });
 export type BannerInput = z.infer<typeof bannerSchema>;
 
 export const productKeyFactSchema = z.object({

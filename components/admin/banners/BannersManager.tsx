@@ -88,9 +88,12 @@ export function BannersManager({ banners }: { banners: AdminBanner[] }) {
   };
 
   const submit = async () => {
+    const isPromo = form.position === "promo";
     const payload = {
       ...form,
-      image_url: form.image_url || "",
+      // A promo strip has no image or sub-headline — don't persist stale values.
+      image_url: isPromo ? "" : form.image_url || "",
+      subheadline: isPromo ? "" : form.subheadline,
       valid_from: form.valid_from || null,
       valid_until: form.valid_until || null,
     };
@@ -137,6 +140,8 @@ export function BannersManager({ banners }: { banners: AdminBanner[] }) {
     toast.success("Banner deleted.");
     router.refresh();
   };
+
+  const isPromo = form.position === "promo";
 
   return (
     <>
@@ -199,42 +204,58 @@ export function BannersManager({ banners }: { banners: AdminBanner[] }) {
             <DialogTitle>{editingId ? "Edit banner" : "New banner"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Field label="Image" error={errors.image_url}>
-              <ImageUpload
-                value={form.image_url}
-                onChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
-                bucket="banner-images"
-                aspect="wide"
-              />
-            </Field>
-            <Field label="Headline" error={errors.headline}>
-              <Input value={form.headline} onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))} />
-            </Field>
-            <Field label="Sub-headline" error={errors.subheadline}>
-              <Textarea
-                value={form.subheadline}
-                onChange={(e) => setForm((f) => ({ ...f, subheadline: e.target.value }))}
-                rows={2}
-              />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="CTA text">
-                <Input value={form.cta_text} onChange={(e) => setForm((f) => ({ ...f, cta_text: e.target.value }))} />
-              </Field>
-              <Field label="CTA link">
-                <Input value={form.cta_link} onChange={(e) => setForm((f) => ({ ...f, cta_link: e.target.value }))} placeholder="/shop" />
-              </Field>
-            </div>
-            <Field label="Position">
+            {/* Position first — it decides which fields below apply. */}
+            <Field label="Position" hint={isPromo ? "A thin text bar at the very top of every page." : "A large banner at the top of the homepage."}>
               <select
                 value={form.position}
                 onChange={(e) => setForm((f) => ({ ...f, position: e.target.value as "hero" | "promo" }))}
                 className="h-10 w-full rounded-lg border border-sand bg-white px-3 text-sm text-green-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green"
               >
-                <option value="hero">Hero</option>
-                <option value="promo">Promo strip</option>
+                <option value="hero">Hero (big homepage banner)</option>
+                <option value="promo">Promo strip (thin bar at the top)</option>
               </select>
             </Field>
+
+            {/* Image — hero only */}
+            {!isPromo && (
+              <Field label="Image" error={errors.image_url}>
+                <ImageUpload
+                  value={form.image_url}
+                  onChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
+                  bucket="banner-images"
+                  aspect="wide"
+                />
+              </Field>
+            )}
+
+            <Field label={isPromo ? "Message" : "Headline"} error={errors.headline}>
+              <Input
+                value={form.headline}
+                onChange={(e) => setForm((f) => ({ ...f, headline: e.target.value }))}
+                placeholder={isPromo ? "e.g. 15% off all bottles this weekend" : undefined}
+              />
+            </Field>
+
+            {/* Sub-headline — hero only */}
+            {!isPromo && (
+              <Field label="Sub-headline" error={errors.subheadline}>
+                <Textarea
+                  value={form.subheadline}
+                  onChange={(e) => setForm((f) => ({ ...f, subheadline: e.target.value }))}
+                  rows={2}
+                />
+              </Field>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label={isPromo ? "Link text (optional)" : "CTA text"}>
+                <Input value={form.cta_text} onChange={(e) => setForm((f) => ({ ...f, cta_text: e.target.value }))} placeholder={isPromo ? "Shop now" : undefined} />
+              </Field>
+              <Field label={isPromo ? "Link URL (optional)" : "CTA link"}>
+                <Input value={form.cta_link} onChange={(e) => setForm((f) => ({ ...f, cta_link: e.target.value }))} placeholder="/shop" />
+              </Field>
+            </div>
+
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Valid from">
                 <Input type="date" value={form.valid_from} onChange={(e) => setForm((f) => ({ ...f, valid_from: e.target.value }))} />

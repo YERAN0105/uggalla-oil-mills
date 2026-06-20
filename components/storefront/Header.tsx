@@ -24,8 +24,10 @@ type NavLink = {
 };
 
 export type NavCategory = { name: string; slug: string };
+/** Active promo strip for the top bar, or null to use the default message. */
+export type HeaderPromo = { headline: string | null; cta_text: string | null; cta_link: string | null } | null;
 
-export function Header({ categories }: { categories: NavCategory[] }) {
+export function Header({ categories, promo }: { categories: NavCategory[]; promo?: HeaderPromo }) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
@@ -64,12 +66,32 @@ export function Header({ categories }: { categories: NavCategory[] }) {
 
   return (
     <>
-      {/* Announcement bar */}
+      {/* Announcement bar — driven by an active "promo" banner (Admin → Banners),
+          falling back to the default free-delivery message when none is set. */}
       <div className="bg-green-deep text-white text-xs sm:text-sm py-2 text-center px-4">
-        Free delivery on orders over Rs. {brand.freeDeliveryThreshold.toLocaleString()} —{" "}
-        <Link href="/shop" className="font-semibold underline underline-offset-2 hover:text-gold transition-colors">
-          Shop Now
-        </Link>
+        {promo?.headline ? (
+          <>
+            {promo.headline}
+            {promo.cta_text && promo.cta_link ? (
+              <>
+                {" — "}
+                <Link
+                  href={promo.cta_link}
+                  className="font-semibold underline underline-offset-2 hover:text-gold transition-colors"
+                >
+                  {promo.cta_text}
+                </Link>
+              </>
+            ) : null}
+          </>
+        ) : (
+          <>
+            {brand.tagline} —{" "}
+            <Link href="/shop" className="font-semibold underline underline-offset-2 hover:text-gold transition-colors">
+              Shop Now
+            </Link>
+          </>
+        )}
       </div>
 
       {/* Main header */}
