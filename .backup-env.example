@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────────
+# DATABASE BACKUP — connection string
+# ─────────────────────────────────────────────────────────────────────────
+# 1. Make a COPY of this file in the same folder.
+# 2. Rename the copy to exactly:   .backup-env      (no ".example" at the end)
+# 3. Paste your real Supabase connection string below, after the = sign.
+#
+# Where to get the connection string:
+#   Supabase dashboard  →  "Connect" button (top of the page)
+#   →  "Session pooler" tab  →  copy the URI.
+#   Then replace [YOUR-PASSWORD] with your database password.
+#
+# IMPORTANT:
+#   • Use the "Session pooler" string (NOT "Transaction pooler").
+#   • NEVER commit the real .backup-env to git — it holds your password.
+#     (.gitignore already blocks it for you.)
+# ─────────────────────────────────────────────────────────────────────────
+
+SUPABASE_DB_URL=postgresql://postgres.xxxxxxxxxxxx:[YOUR-PASSWORD]@aws-0-xxxxx.pooler.supabase.com:5432/postgres
