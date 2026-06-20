@@ -8,6 +8,7 @@ import { JsonLd } from "@/components/shared/JsonLd";
 import { MaintenanceGate } from "@/components/storefront/MaintenanceGate";
 import { getCategories } from "@/lib/products";
 import { getPromoBanner } from "@/lib/banners";
+import { getShopInfo } from "@/lib/settings";
 import { brand } from "@/lib/brand";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -16,17 +17,21 @@ export default async function StorefrontLayout({ children }: { children: React.R
   const gate = await MaintenanceGate();
   if (gate) return gate;
 
-  const [categories, promo] = await Promise.all([getCategories(), getPromoBanner()]);
+  const [categories, promo, shopInfo] = await Promise.all([
+    getCategories(),
+    getPromoBanner(),
+    getShopInfo(),
+  ]);
 
   const organizationLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: brand.name,
+    name: shopInfo.name,
     url: APP_URL,
     logo: `${APP_URL}/logo.jpeg`,
     description: brand.tagline,
-    email: brand.email,
-    telephone: brand.phone,
+    email: shopInfo.email,
+    telephone: shopInfo.phone,
     address: { "@type": "PostalAddress", addressLocality: "Padukka", addressCountry: "LK" },
   };
 
@@ -44,8 +49,8 @@ export default async function StorefrontLayout({ children }: { children: React.R
       <main className="flex-1" id="main-content">
         {children}
       </main>
-      <Footer categories={categories} />
-      <WhatsAppButton />
+      <Footer categories={categories} shopInfo={shopInfo} />
+      <WhatsAppButton whatsapp={shopInfo.whatsapp} />
       <CartDrawer />
       <WishlistProvider />
       <CookieConsent />

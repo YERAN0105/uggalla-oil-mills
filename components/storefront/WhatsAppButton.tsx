@@ -1,9 +1,7 @@
 "use client";
 
-import { brand } from "@/lib/brand";
-
-export function WhatsAppButton() {
-  const number = brand.whatsapp.replace(/\D/g, "");
+export function WhatsAppButton({ whatsapp }: { whatsapp: string }) {
+  const number = whatsapp.replace(/\D/g, "");
   const message = encodeURIComponent(`Hi, I'm visiting Uggalla Oil Mills' website and would like to know more.`);
 
   return (

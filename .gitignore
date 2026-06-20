@@ -18,6 +18,10 @@ build/
 supabase/.temp/
 supabase/.branches/
 
+# Database backups — keep dumps and the connection-string file OUT of git
+backups/
+.backup-env
+
 # Misc
 .DS_Store
 *.pem

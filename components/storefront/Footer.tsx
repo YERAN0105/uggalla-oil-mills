@@ -7,6 +7,7 @@ import { Container } from "@/components/shared/Container";
 import { brand } from "@/lib/brand";
 import { DropletSVG } from "@/components/shared/DropletSVG";
 import type { NavCategory } from "@/components/storefront/Header";
+import type { ShopInfo } from "@/types/checkout";
 
 const supportLinks = [
   { href: "/faq", label: "FAQ" },
@@ -16,7 +17,13 @@ const supportLinks = [
   { href: "/privacy", label: "Privacy Policy" },
 ];
 
-export function Footer({ categories }: { categories: NavCategory[] }) {
+export function Footer({
+  categories,
+  shopInfo,
+}: {
+  categories: NavCategory[];
+  shopInfo: ShopInfo;
+}) {
   // Category links are data-driven so hidden categories drop out of the footer too.
   const quickLinks = [
     { href: "/shop", label: "Shop" },
@@ -89,7 +96,7 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
               )}
               {/* WhatsApp */}
               <a
-                href={`https://wa.me/${brand.whatsapp.replace(/\D/g, "")}`}
+                href={`https://wa.me/${shopInfo.whatsapp.replace(/\D/g, "")}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp"
@@ -148,24 +155,24 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
             <ul className="space-y-3">
               <li className="flex items-start gap-2 text-sm text-white/60">
                 <MapPin className="h-4 w-4 text-gold mt-0.5 flex-shrink-0" />
-                {brand.address}
+                {shopInfo.address}
               </li>
               <li>
                 <a
-                  href={`tel:${brand.phone}`}
+                  href={`tel:${shopInfo.phone}`}
                   className="flex items-center gap-2 text-sm text-white/60 hover:text-gold transition-colors"
                 >
                   <Phone className="h-4 w-4 text-gold flex-shrink-0" />
-                  {brand.phone}
+                  {shopInfo.phone}
                 </a>
               </li>
               <li>
                 <a
-                  href={`mailto:${brand.email}`}
+                  href={`mailto:${shopInfo.email}`}
                   className="flex items-center gap-2 text-sm text-white/60 hover:text-gold transition-colors"
                 >
                   <Mail className="h-4 w-4 text-gold flex-shrink-0" />
-                  {brand.email}
+                  {shopInfo.email}
                 </a>
               </li>
             </ul>
@@ -178,7 +185,7 @@ export function Footer({ categories }: { categories: NavCategory[] }) {
         <Container>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/40">
             <p>
-              © {new Date().getFullYear()} {brand.name}. All rights reserved.
+              © {new Date().getFullYear()} {shopInfo.name}. All rights reserved.
             </p>
             <div className="flex items-center gap-1">
               <DropletSVG size={16} className="text-gold/50" />
