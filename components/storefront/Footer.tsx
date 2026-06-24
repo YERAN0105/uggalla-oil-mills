@@ -14,6 +14,7 @@ const supportLinks = [
   { href: "/delivery-info", label: "Delivery Info" },
   { href: "/contact", label: "Contact Us" },
   { href: "/terms", label: "Terms & Conditions" },
+  { href: "/refund-policy", label: "Return & Refund Policy" },
   { href: "/privacy", label: "Privacy Policy" },
 ];
 
@@ -69,7 +70,7 @@ export function Footer({
           <div className="sm:col-span-2 lg:col-span-1">
             <BrandLogo variant="full" href="/" className="mb-4" />
             <p className="text-sm leading-relaxed text-white/60 mb-5">
-              Pure coconut oil, naturally pressed at our mill in Padukka, Sri Lanka since generations.
+              Pure coconut oil from Padukka, Sri Lanka.
             </p>
             <div className="flex items-center gap-3">
               {brand.socials.facebook && (

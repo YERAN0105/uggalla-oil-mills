@@ -77,7 +77,7 @@ export const PAYMENT_METHOD_LABEL: Record<string, string> = {
 /**
  * Human label for a payment method. The `cod` ("cash") method is the same
  * transaction for delivery and pickup — cash on hand-over — so its wording is
- * fulfillment-aware: "Cash on Delivery" at the door, "Pay at Store" at the mill.
+ * fulfillment-aware: "Cash on Delivery" at the door, "Pay at Store" at the store.
  */
 export function paymentMethodLabel(
   method: string,

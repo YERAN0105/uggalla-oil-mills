@@ -102,6 +102,7 @@ export async function saveProduct(input: unknown, id?: string): Promise<ActionRe
       label: s.label,
       volume_ml: s.volume_ml ?? null,
       price: s.price,
+      compare_at_price: s.compare_at_price ?? null,
       display_order: i,
     }));
     const { error: sizeErr } = await db.from("product_sizes").insert(sizeRows);
@@ -198,6 +199,7 @@ export async function duplicateProduct(id: string): Promise<ActionResult<{ id: s
       label: s.label,
       volume_ml: s.volume_ml,
       price: s.price,
+      compare_at_price: s.compare_at_price ?? null,
       display_order: s.display_order,
     });
   }

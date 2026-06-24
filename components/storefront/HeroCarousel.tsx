@@ -144,9 +144,15 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
 
       {/* Bottom wave */}
       <div className="absolute bottom-0 left-0 right-0" aria-hidden="true">
-        <svg viewBox="0 0 1440 60" className="w-full fill-cream" preserveAspectRatio="none">
+        <svg viewBox="0 0 1440 60" className="block w-full fill-cream" preserveAspectRatio="none">
           <path d="M0,0 C480,60 960,60 1440,0 L1440,60 L0,60 Z" />
         </svg>
+        {/* Solid cream backstop over the wave's flat bottom edge. The curve never
+            dips into this strip, so it can't hide the wave — but a rectangular
+            fill paints to the section's true bottom without the sub-pixel gap
+            the rasterized SVG leaves, which was showing as a dark hairline on
+            high-DPI screens. */}
+        <div className="absolute inset-x-0 bottom-0 h-0.5 bg-cream" />
       </div>
     </section>
   );

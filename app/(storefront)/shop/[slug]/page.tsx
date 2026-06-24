@@ -12,6 +12,7 @@ import { ProductOptions } from "@/components/storefront/ProductOptions";
 import { ReviewsSection, type ProductReview } from "@/components/storefront/ReviewsSection";
 import { RelatedProducts } from "@/components/storefront/RelatedProducts";
 import { StickyBottomBar } from "@/components/storefront/StickyBottomBar";
+import { PdpPurchaseProvider, PdpPriceHeading } from "@/components/storefront/PdpPurchase";
 import { WishlistButton } from "@/components/storefront/WishlistButton";
 import { StarRating } from "@/components/storefront/StarRating";
 import { getProduct, getRelatedProducts, getMinPrice } from "@/lib/products";
@@ -52,7 +53,7 @@ export async function generateMetadata({ params }: PDPProps): Promise<Metadata> 
 
 const TRUST_BADGES = [
   { icon: Leaf, label: "100% Pure" },
-  { icon: Shield, label: "Naturally Pressed" },
+  { icon: Shield, label: "Pure & Natural" },
   { icon: Clock, label: "24h Fresh" },
   { icon: Truck, label: "Island-wide Delivery" },
 ];
@@ -156,7 +157,7 @@ export default async function ProductDetailPage({ params }: PDPProps) {
   };
 
   return (
-    <>
+    <PdpPurchaseProvider product={product}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -245,14 +246,7 @@ export default async function ProductDetailPage({ params }: PDPProps) {
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-display text-3xl font-semibold text-green-deep">
-                      {formatCurrency(minPrice)}
-                    </span>
-                    {product.product_sizes.length > 1 && (
-                      <span className="text-sm text-muted-foreground">from</span>
-                    )}
-                  </div>
+                  <PdpPriceHeading product={product} />
                 )}
               </div>
 
@@ -386,6 +380,6 @@ export default async function ProductDetailPage({ params }: PDPProps) {
 
       {/* Mobile sticky bottom bar */}
       <StickyBottomBar product={product} />
-    </>
+    </PdpPurchaseProvider>
   );
 }

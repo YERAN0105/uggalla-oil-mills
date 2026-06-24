@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { WishlistButton } from "@/components/storefront/WishlistButton";
 import { StarRating } from "@/components/storefront/StarRating";
 import { formatCurrency } from "@/lib/brand";
-import { getMinPrice, getPrimaryImage } from "@/lib/product-utils";
+import { getMinPrice, getPrimaryImage, getDisplayDiscount } from "@/lib/product-utils";
 import type { ProductWithRelations } from "@/types/supabase";
 import { ArrowRight } from "lucide-react";
 
@@ -29,6 +29,7 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
   const primaryImage = getPrimaryImage(product);
   const minPrice = getMinPrice(product);
   const isBulk = product.purchase_type === "bulk_quote";
+  const discount = isBulk ? null : getDisplayDiscount(product);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -47,10 +48,16 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-6xl">🥥</div>
             )}
-            {product.is_featured && (
-              <Badge className="absolute top-3 left-3 bg-gold text-green-deep text-xs font-semibold">
-                Featured
+            {discount ? (
+              <Badge className="absolute top-3 left-3 bg-red-600 text-white text-xs font-bold">
+                {discount.percent}% OFF
               </Badge>
+            ) : (
+              product.is_featured && (
+                <Badge className="absolute top-3 left-3 bg-gold text-green-deep text-xs font-semibold">
+                  Featured
+                </Badge>
+              )
             )}
           </div>
 
@@ -84,6 +91,11 @@ export function QuickViewModal({ product, open, onClose }: QuickViewModalProps) 
               ) : (
                 <>
                   {formatCurrency(minPrice)}
+                  {discount && (
+                    <span className="text-base font-normal text-muted-foreground line-through ml-2">
+                      {formatCurrency(discount.original)}
+                    </span>
+                  )}
                   {product.product_sizes.length > 1 && (
                     <span className="text-sm font-normal text-muted-foreground ml-1">from</span>
                   )}

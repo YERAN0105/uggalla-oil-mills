@@ -23,6 +23,7 @@ import { JsonLd } from "@/components/shared/JsonLd";
 import { getProducts, getCategories } from "@/lib/products";
 import { getHeroBanners } from "@/lib/banners";
 import { HeroCarousel, type HeroSlide } from "@/components/storefront/HeroCarousel";
+import { LogoMarquee, type MarqueeLogo } from "@/components/storefront/LogoMarquee";
 import { brand } from "@/lib/brand";
 
 const trustPoints = [
@@ -33,8 +34,8 @@ const trustPoints = [
   },
   {
     icon: Droplets,
-    title: "Naturally Pressed",
-    description: "Cold-pressed at our Padukka mill using traditional methods for full flavour.",
+    title: "Pure & Natural",
+    description: "Naturally good coconut oil with no additives or preservatives — full of flavour.",
   },
   {
     icon: ShieldCheck,
@@ -46,6 +47,19 @@ const trustPoints = [
     title: "Island-Wide Delivery",
     description: "Fast, careful delivery to every corner of Sri Lanka.",
   },
+];
+
+// ⚠️ PLACEHOLDERS — replace with your REAL certifications, retailers, and B2B
+// clients. Only list certifications you actually hold. To use a logo image, drop
+// the file in `public/trust-logos/` and set `src`; omit `src` to show the name as
+// a text wordmark. Remove any entry you don't have — an empty list hides the strip.
+const trustLogos: MarqueeLogo[] = [
+  { name: "SLS Certified" /* src: "/trust-logos/sls.png" */ },
+  { name: "ISO 22000" /* src: "/trust-logos/iso-22000.png" */ },
+  { name: "HACCP" /* src: "/trust-logos/haccp.png" */ },
+  { name: "Retailer Name" /* src: "/trust-logos/retailer-1.png" */ },
+  { name: "Partner Brand" /* src: "/trust-logos/partner-1.png" */ },
+  { name: "Wholesale Client" /* src: "/trust-logos/client-1.png" */ },
 ];
 
 const howItWorks = [
@@ -65,7 +79,7 @@ const howItWorks = [
     step: "3",
     icon: Truck,
     title: "Delivered fresh",
-    description: "We pack and ship straight from the mill. Track your order every step.",
+    description: "We pack and ship your order fresh from our store. Track it every step.",
   },
 ];
 
@@ -111,7 +125,7 @@ export default async function HomePage() {
   // back to a single built-in default slide when there are none. Each field falls
   // back independently, so a banner can change just the image, just the text, etc.
   const DEFAULT_HERO_SUB =
-    "Naturally pressed at our mill in Padukka since generations. From our coconut groves to your kitchen — pure, fresh, and full of flavour.";
+    "Pure, fresh coconut oil from Padukka to your kitchen — naturally good, with no additives, delivered island-wide.";
   const heroBanners = await getHeroBanners();
   const heroSlides: HeroSlide[] =
     heroBanners.length > 0
@@ -140,52 +154,66 @@ export default async function HomePage() {
     },
   };
 
+  // Store photo — shared between the desktop left column and the mobile in-flow
+  // copy (rendered right under the heading) so the markup stays in one place.
+  const storeImage = (
+    <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/3]">
+      <Image
+        src="/hero.jpeg"
+        alt="Uggalla Oil Mills shop in Padukka, Sri Lanka"
+        fill
+        className="object-cover"
+        sizes="(max-width: 768px) 100vw, 50vw"
+      />
+      {/* Accent badge */}
+      <div className="absolute bottom-4 left-4 bg-gold text-green-deep px-4 py-2 rounded-full font-semibold text-sm">
+        Padukka, Sri Lanka
+      </div>
+    </div>
+  );
+
   return (
     <>
       <JsonLd data={websiteLd} />
       {/* ── Hero (slideshow from Admin → Banners) ─────────────────────────── */}
       <HeroCarousel slides={heroSlides} />
 
+      {/* ── Trust / Certification Marquee ─────────────────────────────────── */}
+      <div className="mt-8 sm:mt-12">
+        <LogoMarquee logos={trustLogos} eyebrow="Trusted, Certified & Stocked Nationwide" />
+      </div>
+
       {/* ── Brand Story Strip ─────────────────────────────────────────────── */}
-      <section className="py-16 bg-cream" aria-label="Our mill">
+      <section className="py-16 bg-cream" aria-label="About us">
         <Container>
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <FadeIn direction="right">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl aspect-[4/3]">
-                <Image
-                  src="/hero.jpeg"
-                  alt="Uggalla Oil Mills shop in Padukka, Sri Lanka"
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
-                {/* Accent badge */}
-                <div className="absolute bottom-4 left-4 bg-gold text-green-deep px-4 py-2 rounded-full font-semibold text-sm">
-                  Padukka, Sri Lanka
-                </div>
-              </div>
+            {/* Desktop: image in the left column. Hidden on mobile, where it
+                appears under the heading instead. */}
+            <FadeIn direction="right" className="hidden lg:block">
+              {storeImage}
             </FadeIn>
 
             <FadeIn direction="left">
               <div className="space-y-6">
-                <span className="text-eyebrow">Our Mill</span>
+                <span className="text-eyebrow">About Us</span>
                 <h2 className="font-display text-4xl text-green-deep leading-tight">
-                  From our mill<br />
-                  <span className="text-green italic">in Padukka</span>
+                  Pure coconut oil<br />
+                  <span className="text-green italic">from Padukka</span>
                 </h2>
+                {/* Mobile: image sits right under the heading. */}
+                <div className="lg:hidden">{storeImage}</div>
                 <div className="space-y-4 text-body">
                   <p>
-                    Deep in the coconut belt of Sri Lanka, our mill has pressed pure coconut oil for generations.
-                    We source only the finest mature coconuts from trusted growers, pressing them fresh
-                    to preserve every drop of natural goodness.
+                    From the heart of Padukka, we bring Sri Lankan homes pure, natural coconut oil —
+                    chosen for its quality and freshness so every drop keeps its natural goodness.
                   </p>
                   <p>
-                    No chemicals. No heat treatment. No shortcuts. Just honest, naturally pressed
-                    coconut oil the way it was always meant to be made.
+                    No additives. No preservatives. No shortcuts. Just honest, pure coconut oil
+                    the way it was always meant to be.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                  {["Cold-pressed", "No additives", "Sri Lankan origin", "Freshly packed"].map((tag) => (
+                  {["Pure & natural", "No additives", "Sri Lankan origin", "Freshly delivered"].map((tag) => (
                     <span
                       key={tag}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sage/50 text-green-deep text-sm font-medium"
@@ -239,16 +267,25 @@ export default async function HomePage() {
                           <DropletSVG className="h-16 w-16 text-white/50" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-green-deep/60 to-transparent" />
+                      {/* Base scrim — light, so the photo stays prominent by
+                          default while keeping the bottom label legible. */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-green-deep/65 via-green-deep/10 to-transparent" />
+                      {/* Hover scrim — the darker treatment fades in on hover for
+                          an interactive emphasis (paired with the image zoom). */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-green-deep via-green-deep/55 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                       {cat.isBulk && (
                         <div className="absolute top-3 right-3">
                           <Badge variant="gold">Get a Quote</Badge>
                         </div>
                       )}
-                      <div className="absolute bottom-0 left-0 right-0 p-5">
+                      {/* text-shadow (inherited by the children) is the safety net
+                          for any bright spot in the image directly under the text. */}
+                      <div className="absolute bottom-0 left-0 right-0 p-5 [text-shadow:0_1px_4px_rgba(0,0,0,0.6)]">
                         <h3 className="font-display text-xl font-semibold text-white">{cat.name}</h3>
                         {cat.description && (
-                          <p className="text-white/70 text-sm">{cat.description}</p>
+                          // Clamp to 2 lines so the label stays tidy; the full
+                          // description is on the category page.
+                          <p className="text-white/85 text-sm line-clamp-2">{cat.description}</p>
                         )}
                       </div>
                     </div>
@@ -281,7 +318,7 @@ export default async function HomePage() {
             </div>
           </FadeIn>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {featuredProducts.map((product, i) => (
               <FadeIn key={product.id} delay={i * 0.08}>
                 <ProductCard product={product} />

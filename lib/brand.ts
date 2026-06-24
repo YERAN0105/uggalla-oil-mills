@@ -1,11 +1,11 @@
 export const brand = {
   name: "Uggalla Oil Mills",
   shortName: "Uggalla",
-  tagline: "Pure Coconut Oil, Naturally Pressed in Padukka",
+  tagline: "Pure Coconut Oil from Padukka, Sri Lanka",
   phone: "+94 77 XXX XXXX",
   whatsapp: "+94 77 XXX XXXX",
   email: "hello@uggallaoilmills.lk",
-  address: "Padukka, Sri Lanka",
+  address: "No. 196/B, Mawathagama, Padukka, Sri Lanka",
   socials: {
     facebook: "",
     instagram: "",

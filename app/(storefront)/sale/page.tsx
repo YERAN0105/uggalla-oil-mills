@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { Tag } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { FilterSidebar } from "@/components/storefront/FilterSidebar";
+import { MobileFilterDrawer } from "@/components/storefront/MobileFilterDrawer";
 import { ProductGrid } from "@/components/storefront/ProductGrid";
 import { ProductGridSkeleton } from "@/components/storefront/ProductSkeleton";
 import { SortSelect } from "@/components/storefront/SortSelect";
@@ -18,13 +18,13 @@ import {
 import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Shop",
-  description: `Browse the full range of ${brand.name} coconut oil — Royal Coco bottles and packets, plus bulk wholesale — fresh from Padukka, Sri Lanka.`,
+  title: "Sale",
+  description: `Discounted ${brand.name} coconut oil — shop products currently on offer while stocks last.`,
 };
 
 const PAGE_SIZE = 12;
 
-interface ShopPageProps {
+interface SalePageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
@@ -33,7 +33,7 @@ function getStringArray(value: string | string[] | undefined): string[] {
   return Array.isArray(value) ? value : [value];
 }
 
-export default async function ShopPage({ searchParams }: ShopPageProps) {
+export default async function SalePage({ searchParams }: SalePageProps) {
   const params = await searchParams;
 
   const categories = getStringArray(params.category);
@@ -42,57 +42,44 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
   const priceMin = params.price_min ? Number(params.price_min) : undefined;
   const priceMax = params.price_max ? Number(params.price_max) : undefined;
   const sort = (params.sort as SortOption) ?? "newest";
-  const query = (params.q as string) ?? "";
   const page = params.page ? Number(params.page) : 1;
-  const onSale = params.sale === "1";
 
   const [{ products, totalCount }, allCategories, allBrands, availableSizes] =
     await Promise.all([
       getProducts({
+        onSale: true,
         categories,
         brands,
         sizes,
         priceMin,
         priceMax,
         sort,
-        query,
         page,
         pageSize: PAGE_SIZE,
-        onSale,
       }),
       getCategories(),
       getBrands(),
       getAvailableSizes(),
     ]);
 
-  const hasQuery = query.trim().length > 0;
-  const hasFilters = categories.length > 0 || brands.length > 0 || sizes.length > 0 || priceMin || priceMax || onSale;
+  const hasFilters =
+    categories.length > 0 || brands.length > 0 || sizes.length > 0 || !!priceMin || !!priceMax;
 
   return (
     <div className="min-h-screen bg-cream">
       {/* Page header */}
       <div className="bg-green-deep text-white py-10">
         <Container>
-          <span className="text-gold text-xs font-semibold uppercase tracking-widest">
-            Our Products
+          <span className="inline-flex items-center gap-1.5 text-gold text-xs font-semibold uppercase tracking-widest">
+            <Tag className="h-3.5 w-3.5" />
+            On Sale
           </span>
           <h1 className="font-display text-3xl sm:text-4xl font-semibold mt-1 mb-2">
-            {hasQuery ? `Results for "${query}"` : "Shop All Products"}
+            Special Offers
           </h1>
           <p className="text-white/70 text-sm max-w-xl">
-            {hasQuery
-              ? `${totalCount} product${totalCount !== 1 ? "s" : ""} found`
-              : "Pure, natural coconut oil — bottles, packets, and bulk wholesale."}
+            Grab our coconut oil at a discount — limited-time prices while stocks last.
           </p>
-          {hasQuery && (
-            <Link
-              href="/shop"
-              className="inline-flex items-center gap-1.5 mt-4 text-sm font-medium text-gold hover:text-white transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to all products
-            </Link>
-          )}
         </Container>
       </div>
 
@@ -106,7 +93,6 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                   categories={allCategories}
                   brands={allBrands}
                   availableSizes={availableSizes}
-                  showSale
                 />
               </Suspense>
             </div>
@@ -118,17 +104,15 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
             <div className="flex items-center justify-between mb-5 gap-4 flex-wrap">
               <p className="text-sm text-muted-foreground">
                 {totalCount > 0
-                  ? `${totalCount} product${totalCount !== 1 ? "s" : ""}${hasFilters ? " (filtered)" : ""}`
-                  : "No products"}
+                  ? `${totalCount} product${totalCount !== 1 ? "s" : ""} on sale${hasFilters ? " (filtered)" : ""}`
+                  : "No products on sale right now"}
               </p>
               <div className="flex items-center gap-3">
-                {/* Mobile filter trigger */}
                 <Suspense fallback={null}>
                   <MobileFilterDrawer
                     categories={allCategories}
                     brands={allBrands}
                     availableSizes={availableSizes}
-                    showSale
                   />
                 </Suspense>
                 <Suspense fallback={null}>
@@ -158,6 +142,3 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     </div>
   );
 }
-
-// ─── Mobile filter drawer ─────────────────────────────────────────────────────
-import { MobileFilterDrawer } from "@/components/storefront/MobileFilterDrawer";

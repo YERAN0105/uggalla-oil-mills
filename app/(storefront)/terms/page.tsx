@@ -52,9 +52,14 @@ export default function TermsPage() {
 
               <h2 className="font-display text-2xl text-green-deep">4. Returns &amp; Refunds</h2>
               <p>
-                If you receive a damaged or incorrect item, please contact us within 48 hours of
-                delivery. We will arrange a replacement or refund at our discretion. We do not
-                accept returns on food products unless they are defective.
+                If you receive a damaged, defective, or incorrect item, please contact us within
+                48 hours of delivery. As our products are food items, we do not accept change-of-mind
+                returns. Full details — including how to make a claim, refund timing, and
+                cancellations — are set out in our{" "}
+                <a href="/refund-policy" className="text-green hover:underline">
+                  Return &amp; Refund Policy
+                </a>
+                .
               </p>
 
               <h2 className="font-display text-2xl text-green-deep">5. Intellectual Property</h2>

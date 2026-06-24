@@ -79,6 +79,7 @@ export interface ProductSizeRow {
   label: string;
   volume_ml: number | null;
   price: number;
+  compare_at_price: number | null;
   display_order: number;
 }
 
