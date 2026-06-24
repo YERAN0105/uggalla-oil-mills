@@ -481,7 +481,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
             <div className="grid sm:grid-cols-2 gap-3">
               {[
                 { value: "delivery", label: "Delivery", desc: "Island-wide", icon: Truck },
-                { value: "pickup", label: "Pickup", desc: "Collect from the mill", icon: Store },
+                { value: "pickup", label: "Pickup", desc: "Collect from the store", icon: Store },
               ].map((opt) => {
                 const active = fulfillmentType === opt.value;
                 const Icon = opt.icon;
@@ -959,7 +959,7 @@ export function CheckoutClient(props: CheckoutClientProps) {
                 <ShieldCheck className="h-3.5 w-3.5 text-green" /> Secure checkout
               </p>
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Leaf className="h-3.5 w-3.5 text-green" /> 100% pure &amp; naturally pressed
+                <Leaf className="h-3.5 w-3.5 text-green" /> 100% pure &amp; natural
               </p>
             </div>
           </div>

@@ -201,7 +201,7 @@ export async function getProductDetail(id: string): Promise<AdminProductDetail |
       .order("display_order", { ascending: true }),
     db
       .from("product_sizes")
-      .select("id, label, volume_ml, price, display_order")
+      .select("id, label, volume_ml, price, compare_at_price, display_order")
       .eq("product_id", id)
       .order("display_order", { ascending: true }),
   ]);
@@ -241,6 +241,7 @@ export async function getProductDetail(id: string): Promise<AdminProductDetail |
       label: s.label,
       volume_ml: s.volume_ml,
       price: Number(s.price) || 0,
+      compare_at_price: s.compare_at_price != null ? Number(s.compare_at_price) : null,
       display_order: s.display_order,
     })),
   };

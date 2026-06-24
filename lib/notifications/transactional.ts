@@ -124,7 +124,7 @@ export async function sendWelcome(input: {
 }): Promise<void> {
   const heading = "Welcome to " + brand.name;
   const paragraphs = [
-    "Thank you for joining us. We press pure coconut oil in Padukka and deliver it island-wide.",
+    "Thank you for joining us. We bring you pure coconut oil from Padukka, delivered island-wide.",
     "Browse our range of bottles, packets and bulk oil — and earn loyalty points on every order.",
   ];
   await dispatch(
@@ -344,7 +344,7 @@ export async function sendReviewRequest(input: {
 }): Promise<void> {
   const paragraphs = [
     `We hope you're enjoying your recent order (${input.orderNumber}).`,
-    "Would you take a moment to share what you think? Your review helps other customers and means a lot to our small mill.",
+    "Would you take a moment to share what you think? Your review helps other customers and means a lot to our small shop.",
   ];
   await dispatch(
     "review_request",

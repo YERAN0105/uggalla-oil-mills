@@ -7,17 +7,25 @@ import { ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/brand";
 import type { ProductWithRelations } from "@/types/supabase";
-import { getMinPrice } from "@/lib/product-utils";
+import { getMinPrice, getSizeDiscount, getDisplayDiscount } from "@/lib/product-utils";
+import { usePdpSize } from "@/components/storefront/PdpPurchase";
 
 interface StickyBottomBarProps {
   product: ProductWithRelations;
-  selectedPrice?: number | null;
 }
 
-export function StickyBottomBar({ product, selectedPrice }: StickyBottomBarProps) {
+export function StickyBottomBar({ product }: StickyBottomBarProps) {
   const [visible, setVisible] = useState(false);
+  const { selectedSize } = usePdpSize();
   const isBulk = product.purchase_type === "bulk_quote";
-  const displayPrice = selectedPrice ?? getMinPrice(product);
+  const multiSize = product.product_sizes.length > 1;
+
+  const displayPrice = selectedSize ? Number(selectedSize.price) : getMinPrice(product);
+  const discount = isBulk
+    ? null
+    : selectedSize
+    ? getSizeDiscount(selectedSize.price, selectedSize.compare_at_price)
+    : getDisplayDiscount(product);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -42,7 +50,12 @@ export function StickyBottomBar({ product, selectedPrice }: StickyBottomBarProps
               <p className="text-xs text-muted-foreground truncate">{product.name}</p>
               <p className="font-display font-semibold text-green-deep">
                 {formatCurrency(displayPrice)}
-                {product.product_sizes.length > 1 && selectedPrice == null && (
+                {discount && (
+                  <span className="text-xs font-normal text-muted-foreground line-through ml-1.5">
+                    {formatCurrency(discount.original)}
+                  </span>
+                )}
+                {multiSize && !selectedSize && (
                   <span className="text-xs font-normal text-muted-foreground ml-1">from</span>
                 )}
               </p>

@@ -114,6 +114,8 @@ export const productSizeSchema = z.object({
   label: z.string().min(1, "Size label is required"),
   volume_ml: z.coerce.number().int().min(0).nullable().optional(),
   price: z.coerce.number().min(0, "Price must be 0 or more"),
+  // Optional "was" price for showing a discount. Null/empty = not on sale.
+  compare_at_price: z.coerce.number().min(0).nullable().optional(),
 });
 
 export const productSchema = z
@@ -147,7 +149,15 @@ export const productSchema = z
   .refine((d) => (d.is_published && d.purchase_type === "retail" ? d.sizes.length > 0 : true), {
     message: "Add at least one size before publishing",
     path: ["sizes"],
-  });
+  })
+  .refine(
+    (d) =>
+      d.sizes.every((s) => s.compare_at_price == null || s.compare_at_price > s.price),
+    {
+      message: "Each original price must be higher than its selling price",
+      path: ["sizes"],
+    }
+  );
 export type ProductInput = z.infer<typeof productSchema>;
 
 export const manualCustomerSchema = z.object({

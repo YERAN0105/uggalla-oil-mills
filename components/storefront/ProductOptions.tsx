@@ -9,12 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/brand";
+import { getSizeDiscount } from "@/lib/product-utils";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/stores/cart";
 import { validateCartItem } from "@/lib/cart/actions";
+import { usePdpSize } from "@/components/storefront/PdpPurchase";
 import type { ProductWithRelations } from "@/types/supabase";
-
-type ProductSizeOption = ProductWithRelations["product_sizes"][0];
 
 interface ProductOptionsProps {
   product: ProductWithRelations;
@@ -35,9 +35,8 @@ export function ProductOptions({ product }: ProductOptionsProps) {
     (a, b) => a.display_order - b.display_order
   );
 
-  const [selectedSize, setSelectedSize] = useState<ProductSizeOption | null>(
-    sortedSizes.length === 1 ? sortedSizes[0] : null
-  );
+  // Selected size is shared with the price heading + sticky bar via context.
+  const { selectedSize, setSelectedSize } = usePdpSize();
   const [quantity, setQuantity] = useState(1);
   const [note, setNote] = useState("");
   const [wantsSubscription, setWantsSubscription] = useState(false);
@@ -127,6 +126,7 @@ export function ProductOptions({ product }: ProductOptionsProps) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Select size">
             {sortedSizes.map((size) => {
               const isSelected = selectedSize?.id === size.id;
+              const sizeDiscount = getSizeDiscount(size.price, size.compare_at_price);
               return (
                 <m.button
                   key={size.id}
@@ -149,9 +149,21 @@ export function ProductOptions({ product }: ProductOptionsProps) {
                     </span>
                   )}
                   <span className="text-sm font-semibold text-green-deep">{size.label}</span>
-                  <span className={cn("text-sm mt-0.5", isSelected ? "text-green font-medium" : "text-muted-foreground")}>
-                    {formatCurrency(Number(size.price))}
+                  <span className="mt-0.5 flex items-baseline gap-1.5">
+                    <span className={cn("text-sm", isSelected ? "text-green font-medium" : "text-muted-foreground")}>
+                      {formatCurrency(Number(size.price))}
+                    </span>
+                    {sizeDiscount && (
+                      <span className="text-xs text-muted-foreground line-through">
+                        {formatCurrency(sizeDiscount.original)}
+                      </span>
+                    )}
                   </span>
+                  {sizeDiscount && (
+                    <span className="mt-0.5 text-[10px] font-bold text-red-600">
+                      {sizeDiscount.percent}% OFF
+                    </span>
+                  )}
                 </m.button>
               );
             })}

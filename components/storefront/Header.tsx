@@ -67,6 +67,7 @@ export function Header({
         })),
       ],
     },
+    { href: "/sale", label: "Sale" },
     { href: "/bulk-request", label: "Bulk Orders" },
     { href: "/about", label: "About" },
     { href: "/contact", label: "Contact" },

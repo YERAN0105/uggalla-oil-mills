@@ -22,7 +22,7 @@ interface Options {
   categories: { id: string; name: string; is_bulk: boolean }[];
 }
 
-type SizeRow = { id?: string; label: string; volume_ml: string; price: string };
+type SizeRow = { id?: string; label: string; volume_ml: string; price: string; compare_at: string };
 type FactRow = { label: string; value: string };
 
 export function ProductForm({
@@ -53,6 +53,7 @@ export function ProductForm({
       label: s.label,
       volume_ml: s.volume_ml != null ? String(s.volume_ml) : "",
       price: String(s.price),
+      compare_at: s.compare_at_price != null ? String(s.compare_at_price) : "",
     })) ?? []
   );
   const [allowsSubscription, setAllowsSubscription] = useState(product?.allows_subscription ?? false);
@@ -104,6 +105,7 @@ export function ProductForm({
       label: s.label,
       volume_ml: s.volume_ml === "" ? null : Number(s.volume_ml),
       price: Number(s.price) || 0,
+      compare_at_price: s.compare_at.trim() === "" ? null : Number(s.compare_at),
     })),
     allows_subscription: allowsSubscription,
     allows_note: allowsNote,
@@ -333,7 +335,7 @@ export function ProductForm({
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => setSizes((s) => [...s, { label: "", volume_ml: "", price: "" }])}
+                onClick={() => setSizes((s) => [...s, { label: "", volume_ml: "", price: "", compare_at: "" }])}
                 className="gap-1"
               >
                 <Plus className="h-4 w-4" /> Add size
@@ -357,6 +359,11 @@ export function ProductForm({
             </Field>
           ) : (
             <>
+              <p className="mb-3 text-xs text-muted-foreground">
+                &ldquo;Was price&rdquo; is optional. Set it higher than the selling price to
+                show that size on sale — the storefront strikes it through and shows the % off
+                automatically. Leave it blank for normal pricing.
+              </p>
               {errors.sizes && <p className="mb-2 text-xs text-red-600">{errors.sizes}</p>}
               {sizes.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -364,14 +371,15 @@ export function ProductForm({
                 </p>
               ) : (
                 <div className="space-y-2">
-                  <div className="hidden grid-cols-[1fr_120px_140px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
+                  <div className="hidden grid-cols-[1fr_100px_120px_120px_40px] gap-2 px-1 text-xs font-medium text-muted-foreground sm:grid">
                     <span>Label</span>
                     <span>Volume (ml)</span>
                     <span>Price</span>
+                    <span>Was price (optional)</span>
                     <span />
                   </div>
                   {sizes.map((s, i) => (
-                    <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_120px_140px_40px]">
+                    <div key={i} className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_100px_120px_120px_40px]">
                       <Input
                         placeholder="Label"
                         value={s.label}
@@ -396,6 +404,15 @@ export function ProductForm({
                         value={s.price}
                         onChange={(e) =>
                           setSizes((arr) => arr.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))
+                        }
+                      />
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="Was (optional)"
+                        value={s.compare_at}
+                        onChange={(e) =>
+                          setSizes((arr) => arr.map((x, j) => (j === i ? { ...x, compare_at: e.target.value } : x)))
                         }
                       />
                       <Button

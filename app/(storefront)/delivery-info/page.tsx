@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 const zones = [
   {
     name: "Padukka & Nearby",
-    area: "Within 10 km of our mill",
+    area: "Within 10 km of our store",
     fee: "Rs. 300.00",
     time: "1–2 hours",
   },
@@ -81,7 +81,7 @@ export default function DeliveryInfoPage() {
                     {
                       icon: Package,
                       title: "Pickup Available",
-                      desc: "Prefer to collect? Pick up from our mill in Padukka at no extra charge. Select 'Pickup' at checkout and choose a time slot.",
+                      desc: "Prefer to collect? Pick up from our store in Padukka at no extra charge. Select 'Pickup' at checkout and choose a time slot.",
                     },
                     {
                       icon: Clock,
@@ -90,7 +90,7 @@ export default function DeliveryInfoPage() {
                     },
                     {
                       icon: MapPin,
-                      title: "Mill Address",
+                      title: "Store Address",
                       desc: brand.address,
                     },
                     {

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useEffect, useTransition } from "react";
-import { X, SlidersHorizontal } from "lucide-react";
+import { X, SlidersHorizontal, Tag } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,8 @@ interface FilterSidebarProps {
   hideBrands?: boolean;
   /** Hide the Size section — used on the bulk category, whose products have no sizes */
   hideSizes?: boolean;
+  /** Show the "On sale only" toggle — used on the main shop page */
+  showSale?: boolean;
 }
 
 const PRICE_MIN = 0;
@@ -36,6 +38,7 @@ export function FilterSidebar({
   hideCategories = false,
   hideBrands = false,
   hideSizes = false,
+  showSale = false,
 }: FilterSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -48,6 +51,7 @@ export function FilterSidebar({
   const selectedCategories = searchParams.getAll("category");
   const selectedBrands = searchParams.getAll("brand");
   const selectedSizes = searchParams.getAll("size");
+  const onSaleOnly = searchParams.get("sale") === "1";
 
   // Local state gives instant visual feedback while dragging
   const [localMin, setLocalMin] = useState(urlMin);
@@ -61,8 +65,16 @@ export function FilterSidebar({
     selectedCategories.length > 0 ||
     selectedBrands.length > 0 ||
     selectedSizes.length > 0 ||
+    onSaleOnly ||
     urlMin > 0 ||
     urlMax < PRICE_MAX_DEFAULT;
+
+  const toggleSale = () => {
+    updateParams((params) => {
+      if (params.get("sale") === "1") params.delete("sale");
+      else params.set("sale", "1");
+    });
+  };
 
   const updateParams = (updater: (params: URLSearchParams) => void) => {
     startTransition(() => {
@@ -101,6 +113,7 @@ export function FilterSidebar({
       params.delete("size");
       params.delete("price_min");
       params.delete("price_max");
+      params.delete("sale");
     });
   };
 
@@ -122,6 +135,24 @@ export function FilterSidebar({
           </button>
         )}
       </div>
+
+      {/* On sale only */}
+      {showSale && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50/60 px-3 py-2">
+          <Checkbox
+            id="filter-sale"
+            checked={onSaleOnly}
+            onCheckedChange={toggleSale}
+          />
+          <Label
+            htmlFor="filter-sale"
+            className="text-sm font-semibold text-red-700 cursor-pointer select-none flex items-center gap-1.5"
+          >
+            <Tag className="h-3.5 w-3.5" />
+            On sale only
+          </Label>
+        </div>
+      )}
 
       {/* Category */}
       {!hideCategories && categories.length > 0 && (

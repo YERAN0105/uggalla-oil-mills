@@ -16,6 +16,7 @@ export interface ProductFilters {
   featured?: boolean;
   bestseller?: boolean;
   purchaseType?: "retail" | "bulk_quote";
+  onSale?: boolean;       // products with at least one discounted size
 }
 
 export interface ProductsResult {
@@ -32,7 +33,7 @@ const PRODUCT_SELECT = `
   brands:brand_id(id, name, slug),
   categories:category_id!inner(id, name, slug, is_bulk),
   product_images(id, url, alt_text, is_primary, display_order),
-  product_sizes(id, label, volume_ml, price, display_order)
+  product_sizes(id, label, volume_ml, price, compare_at_price, display_order)
 `;
 
 export async function getProducts(filters: ProductFilters = {}): Promise<ProductsResult> {
@@ -103,6 +104,19 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
     if (priceFilteredIds.length === 0) return { products: [], totalCount: 0 };
   }
 
+  // Resolve product IDs that are "on sale" — i.e. have ≥1 size with a
+  // compare_at_price set. The DB CHECK (migration 014) guarantees a non-null
+  // compare_at_price is always > price, so "is not null" === "on sale".
+  let onSaleIds: string[] | undefined;
+  if (filters.onSale) {
+    const { data } = await supabase
+      .from("product_sizes")
+      .select("product_id")
+      .not("compare_at_price", "is", null);
+    onSaleIds = [...new Set(data?.map((s) => s.product_id) ?? [])];
+    if (onSaleIds.length === 0) return { products: [], totalCount: 0 };
+  }
+
   let query = supabase
     .from("products")
     .select(PRODUCT_SELECT, { count: "exact" })
@@ -113,6 +127,7 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
   if (brandIds?.length) query = query.in("brand_id", brandIds);
   if (sizeFilteredIds?.length) query = query.in("id", sizeFilteredIds);
   if (priceFilteredIds?.length) query = query.in("id", priceFilteredIds);
+  if (onSaleIds?.length) query = query.in("id", onSaleIds);
   if (filters.featured) query = query.eq("is_featured", true);
   if (filters.bestseller) query = query.eq("is_bestseller", true);
   if (filters.purchaseType) query = query.eq("purchase_type", filters.purchaseType);

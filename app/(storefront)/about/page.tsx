@@ -6,7 +6,7 @@ import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "About Us",
-  description: `Learn about ${brand.name} — our mill, our people, and our process.`,
+  description: `Learn about ${brand.name} — who we are and what we stand for.`,
 };
 
 export default function AboutPage() {
@@ -28,7 +28,7 @@ export default function AboutPage() {
             <span className="text-eyebrow text-gold/80 mb-3 block">Our Story</span>
             <h1 className="font-display text-5xl font-bold mb-4">About Uggalla Oil Mills</h1>
             <p className="text-white/70 max-w-xl text-lg">
-              From the heart of Padukka, Sri Lanka — a legacy of pure, naturally pressed coconut oil.
+              From the heart of Padukka, Sri Lanka — pure coconut oil for every home.
             </p>
           </FadeIn>
         </Container>
@@ -39,28 +39,26 @@ export default function AboutPage() {
         <Container size="narrow">
           <FadeIn>
             <div className="prose prose-green max-w-none space-y-6 text-body">
-              <h2 className="font-display text-3xl text-green-deep">Our Heritage</h2>
+              <h2 className="font-display text-3xl text-green-deep">Who We Are</h2>
               <p>
-                Uggalla Oil Mills has been pressing pure coconut oil in Padukka for generations.
-                What started as a small family operation has grown into one of Sri Lanka&apos;s
-                most trusted names in premium coconut oil — but our methods remain unchanged.
+                Uggalla Oil Mills is a Padukka-based shop bringing Sri Lankan homes pure, premium
+                coconut oil. What started small has grown into a name our customers trust for
+                quality and honest value.
               </p>
               <p>
-                We source only the finest mature coconuts from carefully chosen growers within
-                the coconut belt of Sri Lanka. Each coconut is inspected, cracked, and pressed
-                fresh at our Padukka mill — preserving the full flavour, aroma, and nutritional
-                value that makes our oil distinctive.
+                We&apos;re selective about quality — every product on our shelves is chosen for its
+                purity, freshness, and flavour, so you get coconut oil you can feel good about
+                cooking with.
               </p>
-              <h2 className="font-display text-3xl text-green-deep">Our Process</h2>
+              <h2 className="font-display text-3xl text-green-deep">Our Promise</h2>
               <p>
-                Unlike mass-produced oils that rely on chemical solvents and high-heat processing,
-                we use a cold-press method that retains the oil&apos;s natural properties. No additives.
-                No preservatives. No shortcuts. Just honest oil the way it was always meant to be made.
+                We believe good coconut oil should be simple and honest. No additives. No
+                preservatives. No shortcuts — just pure oil and fair prices, delivered fresh to
+                your door across Sri Lanka.
               </p>
               <p>
-                Our flagship brand, <strong>Royal Coco</strong>, represents the pinnacle of this
-                process — carefully graded, fresh-packed, and available in bottle and packet formats
-                for homes across Sri Lanka.
+                Our retail brand, <strong>Royal Coco</strong>, brings you carefully selected
+                coconut oil in convenient bottle and packet formats for homes across Sri Lanka.
               </p>
             </div>
           </FadeIn>

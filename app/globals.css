@@ -103,6 +103,24 @@
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite linear;
   }
+
+  /* Logo marquee — continuous horizontal scroll. The track holds two copies of
+     the logos and translates by -50% so the loop is seamless. Pauses on hover;
+     reduced-motion is handled by the global rule above. */
+  @keyframes marquee-scroll {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  .animate-marquee {
+    animation: marquee-scroll var(--marquee-duration, 40s) linear infinite;
+  }
+  .marquee-group:hover .animate-marquee {
+    animation-play-state: paused;
+  }
 }
 
 /* ─── Scrollbar ───────────────────────────────────────────────────────────── */

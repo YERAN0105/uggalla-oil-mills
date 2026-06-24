@@ -169,6 +169,7 @@ export type Database = {
           label: string;
           volume_ml: number | null;
           price: number;
+          compare_at_price: number | null;
           display_order: number;
           created_at: string;
         };
@@ -178,6 +179,7 @@ export type Database = {
           label: string;
           volume_ml?: number | null;
           price: number;
+          compare_at_price?: number | null;
           display_order?: number;
           created_at?: string;
         };
@@ -381,7 +383,7 @@ export interface ProductWithRelations extends Omit<Product, "key_facts"> {
   brands: Pick<Brand, "id" | "name" | "slug"> | null;
   categories: Pick<Category, "id" | "name" | "slug" | "is_bulk">;
   product_images: Pick<ProductImage, "id" | "url" | "alt_text" | "is_primary" | "display_order">[];
-  product_sizes: Pick<ProductSize, "id" | "label" | "volume_ml" | "price" | "display_order">[];
+  product_sizes: Pick<ProductSize, "id" | "label" | "volume_ml" | "price" | "compare_at_price" | "display_order">[];
   avg_rating?: number | null;
   review_count?: number | null;
 }

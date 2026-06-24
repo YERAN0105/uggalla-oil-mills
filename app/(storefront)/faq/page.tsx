@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "What makes Uggalla Oil Mills coconut oil different?",
-    a: "Our oil is cold-pressed at our own mill in Padukka from freshly sourced Sri Lankan coconuts. We use no chemicals, no additives, and no heat treatment — just pure, naturally pressed oil.",
+    a: "Our coconut oil is pure and natural — made from quality Sri Lankan coconuts, with no chemicals, no additives, and no preservatives. We focus on freshness and quality in every bottle.",
   },
   {
     q: "Is your coconut oil suitable for cooking?",

@@ -34,7 +34,7 @@ export async function subscribeNewsletter(emailRaw: string): Promise<SimpleResul
         preview: `You're subscribed to ${brand.name}`,
         heading: "You're on the list",
         paragraphs: [
-          `Thanks for subscribing to ${brand.name}. You'll be the first to hear about new products, offers and seasonal pressings.`,
+          `Thanks for subscribing to ${brand.name}. You'll be the first to hear about new products, offers and seasonal specials.`,
         ],
         cta: { label: "Shop now", url: `${APP_URL}/shop` },
         shopEmail: brand.email,

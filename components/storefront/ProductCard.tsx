@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { WishlistButton } from "@/components/storefront/WishlistButton";
 import { StarRating } from "@/components/storefront/StarRating";
 import { formatCurrency } from "@/lib/brand";
-import { getMinPrice, getPrimaryImage } from "@/lib/product-utils";
+import { getMinPrice, getPrimaryImage, getDisplayDiscount } from "@/lib/product-utils";
 import type { ProductWithRelations } from "@/types/supabase";
 import { cn } from "@/lib/utils";
 import { Tag } from "lucide-react";
@@ -21,6 +21,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   const isOutOfStock =
     product.stock_tracked && product.stock_quantity <= 0 && !isBulk;
   const hasMultipleSizes = product.product_sizes.length > 1;
+  const discount = isBulk ? null : getDisplayDiscount(product);
 
   return (
     <div className="group relative flex flex-col rounded-xl overflow-hidden bg-white border border-sand hover:border-green/30 hover:shadow-[0_8px_30px_rgba(27,107,58,0.12)] transition-all duration-300">
@@ -45,6 +46,11 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
 
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">
+          {discount && (
+            <Badge className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 shadow-sm">
+              {discount.percent}% OFF
+            </Badge>
+          )}
           {product.is_featured && (
             <Badge className="bg-gold text-green-deep text-[10px] font-semibold px-1.5 py-0.5 shadow-sm">
               Featured
@@ -126,12 +132,17 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
                 <span>from {formatCurrency(minPrice)} / L</span>
               </div>
             ) : (
-              <div>
-                <span className="text-green-deep font-semibold text-sm">
+              <div className="flex flex-col">
+                <span className="text-green-deep font-semibold text-sm whitespace-nowrap">
                   {formatCurrency(minPrice)}
+                  {hasMultipleSizes && (
+                    <span className="text-xs text-muted-foreground font-normal ml-1">from</span>
+                  )}
                 </span>
-                {hasMultipleSizes && (
-                  <span className="text-xs text-muted-foreground ml-1">from</span>
+                {discount && (
+                  <span className="text-xs text-muted-foreground line-through whitespace-nowrap">
+                    {formatCurrency(discount.original)}
+                  </span>
                 )}
               </div>
             )}

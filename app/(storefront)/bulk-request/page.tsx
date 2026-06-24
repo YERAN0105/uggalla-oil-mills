@@ -72,7 +72,7 @@ export default async function BulkRequestPage({ searchParams }: BulkRequestPageP
                 </h3>
                 <ul className="space-y-3 text-sm text-muted-foreground">
                   {[
-                    "Cold-pressed at our own mill in Padukka — no middlemen",
+                    "Pure, quality coconut oil — consistent in every order",
                     "Volume pricing — the more you order, the better the rate",
                     "20L food-grade cans or custom packaging available",
                     "Island-wide delivery within 2–5 business days",
