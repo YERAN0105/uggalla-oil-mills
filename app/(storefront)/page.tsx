@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -61,6 +63,14 @@ const trustLogos: MarqueeLogo[] = [
   { name: "Partner Brand" /* src: "/trust-logos/partner-1.png" */ },
   { name: "Wholesale Client" /* src: "/trust-logos/client-1.png" */ },
 ];
+
+// Optional portrait crop for the *default* hero, used only on phones. Drop a file
+// at `public/hero-mobile.jpeg` and it's picked up automatically; if it's absent
+// the wide `hero.jpeg` is used on every screen (current behaviour). Checked once
+// at module load — a new deploy (or dev restart) re-evaluates it.
+const DEFAULT_HERO_MOBILE = fs.existsSync(path.join(process.cwd(), "public", "hero-mobile.jpeg"))
+  ? "/hero-mobile.jpeg"
+  : undefined;
 
 const howItWorks = [
   {
@@ -133,13 +143,25 @@ export default async function HomePage() {
           const hasCta = !!(b.cta_text?.trim() && b.cta_link?.trim());
           return {
             image: b.image_url || "/hero.jpeg",
+            // A banner's own mobile crop if set; else fall back to the wide image
+            // on phones (never mix in the default hero's mobile crop).
+            mobileImage: b.mobile_image_url || undefined,
             headline: b.headline?.trim() || null,
             subheadline: b.subheadline?.trim() || DEFAULT_HERO_SUB,
             ctaText: hasCta ? b.cta_text!.trim() : "Shop Now",
             ctaLink: hasCta ? b.cta_link!.trim() : "/shop",
           };
         })
-      : [{ image: "/hero.jpeg", headline: null, subheadline: DEFAULT_HERO_SUB, ctaText: "Shop Now", ctaLink: "/shop" }];
+      : [
+          {
+            image: "/hero.jpeg",
+            mobileImage: DEFAULT_HERO_MOBILE,
+            headline: null,
+            subheadline: DEFAULT_HERO_SUB,
+            ctaText: "Shop Now",
+            ctaLink: "/shop",
+          },
+        ];
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const websiteLd = {

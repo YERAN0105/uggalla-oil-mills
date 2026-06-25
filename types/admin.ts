@@ -136,6 +136,7 @@ export type CouponAppliesTo =
 export interface AdminBanner {
   id: string;
   image_url: string | null;
+  mobile_image_url: string | null;
   headline: string | null;
   subheadline: string | null;
   cta_text: string | null;

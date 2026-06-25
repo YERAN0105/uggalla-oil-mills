@@ -13,6 +13,7 @@ export default async function BannersPage() {
   const banners: AdminBanner[] = ((data as any[]) ?? []).map((b) => ({
     id: b.id,
     image_url: b.image_url,
+    mobile_image_url: b.mobile_image_url ?? null,
     headline: b.headline,
     subheadline: b.subheadline,
     cta_text: b.cta_text,
