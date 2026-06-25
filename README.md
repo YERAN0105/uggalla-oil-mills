@@ -226,9 +226,10 @@ See also: [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md),
 
 ### Favicons & PWA icons
 
-`app/manifest.ts` currently points at `/public/logo.jpeg`. Before launch, generate square PNG
-icons (192×192, 512×512, a maskable variant, and a 180×180 `apple-icon.png`) from the logo and
-drop them in `app/` (Next's icon convention) or `public/`, then update `manifest.ts`.
+Brand icons are generated from `public/logo.jpeg` by [`scripts/generate-icons.ts`](scripts/generate-icons.ts)
+(`npm run generate-icons`): `app/icon.png` (browser-tab favicon) and `app/apple-icon.png` (iOS) via
+Next's icon convention, plus `public/icon-192.png`, `public/icon-512.png`, and a maskable
+`public/icon-maskable-512.png` referenced by `app/manifest.ts`. Re-run the script after changing the logo.
 
 ---
 
