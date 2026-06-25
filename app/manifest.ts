@@ -10,11 +10,12 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     background_color: "#FBF7EE",
     theme_color: "#1B6B3A",
-    // Uses the existing logo asset. Replace with purpose-built square PNG icons
-    // (192/512 + maskable) before launch — see docs/README "Favicons & PWA icons".
+    // Generated from public/logo.jpeg by scripts/generate-icons.ts
+    // (npm run generate-icons). Re-run after changing the logo.
     icons: [
-      { src: "/logo.jpeg", sizes: "192x192", type: "image/jpeg" },
-      { src: "/logo.jpeg", sizes: "512x512", type: "image/jpeg" },
+      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
