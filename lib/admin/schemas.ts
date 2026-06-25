@@ -82,6 +82,7 @@ export type CouponInput = z.infer<typeof couponSchema>;
 export const bannerSchema = z
   .object({
     image_url: z.string().url().optional().or(z.literal("")),
+    mobile_image_url: z.string().url().optional().or(z.literal("")),
     headline: z.string().max(120).optional().or(z.literal("")),
     subheadline: z.string().max(240).optional().or(z.literal("")),
     cta_text: z.string().max(60).optional().or(z.literal("")),

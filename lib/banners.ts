@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 export interface HeroBanner {
   id: string;
   image_url: string | null;
+  /** Optional tall/portrait crop shown only on phones; null → use image_url. */
+  mobile_image_url: string | null;
   headline: string | null;
   subheadline: string | null;
   cta_text: string | null;
@@ -22,7 +24,7 @@ export async function getHeroBanners(): Promise<HeroBanner[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("banners")
-    .select("id, image_url, headline, subheadline, cta_text, cta_link")
+    .select("id, image_url, mobile_image_url, headline, subheadline, cta_text, cta_link")
     .eq("position", "hero")
     .eq("is_active", true)
     .order("display_order", { ascending: true });

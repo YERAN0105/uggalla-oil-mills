@@ -26,6 +26,7 @@ import type { AdminBanner } from "@/types/admin";
 
 type FormState = {
   image_url: string | null;
+  mobile_image_url: string | null;
   headline: string;
   subheadline: string;
   cta_text: string;
@@ -39,6 +40,7 @@ type FormState = {
 
 const EMPTY: FormState = {
   image_url: null,
+  mobile_image_url: null,
   headline: "",
   subheadline: "",
   cta_text: "",
@@ -73,6 +75,7 @@ export function BannersManager({ banners }: { banners: AdminBanner[] }) {
     setEditingId(b.id);
     setForm({
       image_url: b.image_url,
+      mobile_image_url: b.mobile_image_url,
       headline: b.headline ?? "",
       subheadline: b.subheadline ?? "",
       cta_text: b.cta_text ?? "",
@@ -93,6 +96,7 @@ export function BannersManager({ banners }: { banners: AdminBanner[] }) {
       ...form,
       // A promo strip has no image or sub-headline — don't persist stale values.
       image_url: isPromo ? "" : form.image_url || "",
+      mobile_image_url: isPromo ? "" : form.mobile_image_url || "",
       subheadline: isPromo ? "" : form.subheadline,
       valid_from: form.valid_from || null,
       valid_until: form.valid_until || null,
@@ -218,12 +222,29 @@ export function BannersManager({ banners }: { banners: AdminBanner[] }) {
 
             {/* Image — hero only */}
             {!isPromo && (
-              <Field label="Image" error={errors.image_url}>
+              <Field label="Image (desktop)" error={errors.image_url} hint="Wide photo shown on tablets and computers.">
                 <ImageUpload
                   value={form.image_url}
                   onChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
                   bucket="banner-images"
                   aspect="wide"
+                />
+              </Field>
+            )}
+
+            {/* Optional portrait crop for phones — hero only. Falls back to the
+                desktop image on phones when left empty. */}
+            {!isPromo && (
+              <Field
+                label="Mobile image (optional)"
+                error={errors.mobile_image_url}
+                hint="Tall/portrait crop of the same photo, shown only on phones. Leave empty to use the desktop image everywhere."
+              >
+                <ImageUpload
+                  value={form.mobile_image_url}
+                  onChange={(url) => setForm((f) => ({ ...f, mobile_image_url: url }))}
+                  bucket="banner-images"
+                  aspect="square"
                 />
               </Field>
             )}

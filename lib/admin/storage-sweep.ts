@@ -97,7 +97,7 @@ async function buildKeepList(db: ReturnType<typeof createAdminClient>): Promise<
     db.from("product_images").select("url"),
     db.from("brands").select("image_url"),
     db.from("categories").select("image_url"),
-    db.from("banners").select("image_url"),
+    db.from("banners").select("image_url, mobile_image_url"),
     db.from("review_images").select("url"),
     db.from("settings").select("key, value").in("key", ["shop_info", "seo"]),
   ]);
@@ -105,7 +105,10 @@ async function buildKeepList(db: ReturnType<typeof createAdminClient>): Promise<
   for (const r of (productImages.data as any[]) ?? []) add(r.url);
   for (const r of (brands.data as any[]) ?? []) add(r.image_url);
   for (const r of (categories.data as any[]) ?? []) add(r.image_url);
-  for (const r of (banners.data as any[]) ?? []) add(r.image_url);
+  for (const r of (banners.data as any[]) ?? []) {
+    add(r.image_url);
+    add(r.mobile_image_url);
+  }
   for (const r of (reviewImages.data as any[]) ?? []) add(r.url);
 
   for (const row of (settings.data as any[]) ?? []) {

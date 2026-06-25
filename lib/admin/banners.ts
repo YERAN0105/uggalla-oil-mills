@@ -25,6 +25,7 @@ export async function saveBanner(input: unknown, id?: string): Promise<ActionRes
   const db = createAdminClient();
   const row = {
     image_url: d.image_url || null,
+    mobile_image_url: d.mobile_image_url || null,
     headline: d.headline || null,
     subheadline: d.subheadline || null,
     cta_text: d.cta_text || null,
@@ -37,10 +38,16 @@ export async function saveBanner(input: unknown, id?: string): Promise<ActionRes
   };
 
   if (id) {
-    const { data: prev } = await db.from("banners").select("image_url").eq("id", id).maybeSingle();
+    const { data: prev } = await db
+      .from("banners")
+      .select("image_url, mobile_image_url")
+      .eq("id", id)
+      .maybeSingle();
     const { error } = await db.from("banners").update(row).eq("id", id);
     if (error) return { ok: false, error: error.message };
-    await deleteReplacedImage((prev as { image_url: string | null } | null)?.image_url, row.image_url);
+    const prevRow = prev as { image_url: string | null; mobile_image_url: string | null } | null;
+    await deleteReplacedImage(prevRow?.image_url, row.image_url);
+    await deleteReplacedImage(prevRow?.mobile_image_url, row.mobile_image_url);
     await logActivity(admin.id, { action: "banner.update", targetTable: "banners", targetId: id });
     revalidate();
     return { ok: true, data: { id } };
@@ -55,10 +62,16 @@ export async function saveBanner(input: unknown, id?: string): Promise<ActionRes
 export async function deleteBanner(id: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   const db = createAdminClient();
-  const { data: existing } = await db.from("banners").select("image_url").eq("id", id).maybeSingle();
+  const { data: existing } = await db
+    .from("banners")
+    .select("image_url, mobile_image_url")
+    .eq("id", id)
+    .maybeSingle();
   const { error } = await db.from("banners").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
-  await deletePublicImage((existing as { image_url: string | null } | null)?.image_url);
+  const existingRow = existing as { image_url: string | null; mobile_image_url: string | null } | null;
+  await deletePublicImage(existingRow?.image_url);
+  await deletePublicImage(existingRow?.mobile_image_url);
   await logActivity(admin.id, { action: "banner.delete", targetTable: "banners", targetId: id });
   revalidate();
   return { ok: true };

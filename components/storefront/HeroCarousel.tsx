@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { Fragment, useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronRight, ChevronLeft } from "lucide-react";
@@ -11,8 +11,13 @@ import { DropletSVG } from "@/components/shared/DropletSVG";
 import { cn } from "@/lib/utils";
 
 export type HeroSlide = {
-  /** Resolved image (banner image or the built-in default). */
+  /** Resolved wide image (banner image or the built-in default); used on ≥sm. */
   image: string;
+  /**
+   * Optional tall/portrait crop shown only on phones (<sm). When omitted the
+   * wide `image` is used at every screen size, exactly as before.
+   */
+  mobileImage?: string | null;
   /** null → render the styled default headline. */
   headline: string | null;
   subheadline: string;
@@ -49,22 +54,51 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
       aria-label="Hero"
       aria-roledescription={multi ? "carousel" : undefined}
     >
-      {/* Background images — stacked for a smooth crossfade between slides. */}
+      {/* Background images — stacked for a smooth crossfade between slides. When a
+          slide has a mobileImage we render two: a portrait crop shown only on
+          phones (sm:hidden) and the wide one shown from sm up (hidden sm:block).
+          Without a mobileImage we render the single wide image as before. */}
       <div className="absolute inset-0">
-        {slides.map((s, i) => (
-          <Image
-            key={i}
-            src={s.image}
-            alt={s.headline ?? "Uggalla Oil Mills shop in Padukka, Sri Lanka"}
-            fill
-            priority={i === 0}
-            sizes="100vw"
-            className={cn(
-              "object-cover object-center transition-opacity duration-700",
-              i === active ? "opacity-40" : "opacity-0"
-            )}
-          />
-        ))}
+        {slides.map((s, i) => {
+          const alt = s.headline ?? "Uggalla Oil Mills shop in Padukka, Sri Lanka";
+          const base = cn(
+            "object-cover object-center transition-opacity duration-700",
+            i === active ? "opacity-40" : "opacity-0"
+          );
+          return (
+            <Fragment key={i}>
+              {s.mobileImage ? (
+                <>
+                  <Image
+                    src={s.mobileImage}
+                    alt={alt}
+                    fill
+                    priority={i === 0}
+                    sizes="100vw"
+                    className={cn(base, "sm:hidden")}
+                  />
+                  <Image
+                    src={s.image}
+                    alt={alt}
+                    fill
+                    priority={i === 0}
+                    sizes="100vw"
+                    className={cn(base, "hidden sm:block")}
+                  />
+                </>
+              ) : (
+                <Image
+                  src={s.image}
+                  alt={alt}
+                  fill
+                  priority={i === 0}
+                  sizes="100vw"
+                  className={base}
+                />
+              )}
+            </Fragment>
+          );
+        })}
         <div className="absolute inset-0 bg-gradient-to-r from-green-deep/90 via-green-deep/60 to-transparent" />
       </div>
 
