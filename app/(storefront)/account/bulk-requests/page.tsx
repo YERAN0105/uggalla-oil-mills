@@ -149,17 +149,16 @@ export default async function BulkRequestsPage() {
                     {/* Payment handling */}
                     <div className="mt-3">
                       {req.converted_order_id ? (
-                        <p className="text-sm text-green">
-                          ✓ Paid —{" "}
+                        <p className="text-sm text-muted-foreground">
                           {req.converted_order_number ? (
                             <Link
                               href={`/account/orders/${req.converted_order_number}`}
-                              className="font-medium underline"
+                              className="font-medium text-green underline"
                             >
-                              view order {req.converted_order_number}
+                              View order {req.converted_order_number} →
                             </Link>
                           ) : (
-                            "order created"
+                            "Order created — we'll be in touch."
                           )}
                         </p>
                       ) : req.payment_mode === "online" ? (

@@ -56,13 +56,28 @@ export async function signIn(formData: FormData) {
   const password = formData.get("password") as string;
   const redirectTo = (formData.get("redirect") as string) || "/";
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     return { error: error.message };
   }
 
   revalidatePath("/", "layout");
+
+  // Admins land in the admin panel by default. Honor an explicit deep-link
+  // (e.g. bounced from a specific admin page); only override the storefront
+  // defaults ("/" or the account area), so customer behavior is unchanged.
+  if (data.user && (redirectTo === "/" || redirectTo.startsWith("/account"))) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", data.user.id)
+      .single();
+    if (profile?.role === "admin") {
+      redirect("/admin");
+    }
+  }
+
   redirect(redirectTo);
 }
 
