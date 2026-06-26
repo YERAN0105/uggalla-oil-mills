@@ -72,7 +72,7 @@ export function SettingsClient(props: Props) {
       </div>
 
       <Tabs defaultValue="shop">
-        <TabsList className="flex w-full flex-wrap justify-start">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-y-1">
           <TabsTrigger value="shop">Shop Info</TabsTrigger>
           <TabsTrigger value="tax">Tax</TabsTrigger>
           <TabsTrigger value="subs">Subscriptions</TabsTrigger>

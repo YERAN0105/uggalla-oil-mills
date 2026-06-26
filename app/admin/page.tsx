@@ -113,7 +113,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Top products + recent orders */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel>
           <h2 className="mb-4 font-display text-lg font-semibold text-green-deep">
             Top selling (30 days)
@@ -121,22 +121,24 @@ export default async function AdminDashboard() {
           {top.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No sales yet.</p>
           ) : (
-            <ul className="space-y-3">
-              {top.map((t) => (
-                <li key={t.productId ?? t.name} className="space-y-1">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="truncate font-medium text-green-deep">{t.name}</span>
-                    <span className="ml-2 shrink-0 text-muted-foreground">{t.units} units</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-sand">
-                    <div
-                      className="h-full rounded-full bg-green"
-                      style={{ width: `${(t.units / maxUnits) * 100}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className="overflow-x-auto">
+              <ul className="w-max min-w-full space-y-3">
+                {top.map((t) => (
+                  <li key={t.productId ?? t.name} className="space-y-1">
+                    <div className="flex items-center justify-between gap-6 text-sm">
+                      <span className="whitespace-nowrap font-medium text-green-deep">{t.name}</span>
+                      <span className="whitespace-nowrap text-muted-foreground">{t.units} units</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-sand">
+                      <div
+                        className="h-full rounded-full bg-green"
+                        style={{ width: `${(t.units / maxUnits) * 100}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </Panel>
 
@@ -153,31 +155,33 @@ export default async function AdminDashboard() {
           {recent.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">No orders yet.</p>
           ) : (
-            <div className="space-y-2">
-              {recent.map((o) => (
-                <div
-                  key={o.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-sand/70 px-3 py-2"
-                >
-                  <div className="min-w-0">
-                    <Link
-                      href={`/admin/orders/${o.order_number}`}
-                      className="block truncate text-sm font-semibold text-green-deep hover:underline"
-                    >
-                      {o.order_number}
-                    </Link>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {o.customer} · {formatShortDate(o.created_at)}
-                    </p>
+            <div className="overflow-x-auto">
+              <div className="w-max min-w-full space-y-2">
+                {recent.map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex items-center justify-between gap-6 rounded-lg border border-sand/70 px-3 py-2"
+                  >
+                    <div>
+                      <Link
+                        href={`/admin/orders/${o.order_number}`}
+                        className="block whitespace-nowrap text-sm font-semibold text-green-deep hover:underline"
+                      >
+                        {o.order_number}
+                      </Link>
+                      <p className="whitespace-nowrap text-xs text-muted-foreground">
+                        {o.customer} · {formatShortDate(o.created_at)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="whitespace-nowrap text-sm font-medium text-green-deep">
+                        {formatCurrency(o.total)}
+                      </span>
+                      <QuickStatusSelect orderId={o.id} status={o.status} />
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className="hidden text-sm font-medium text-green-deep sm:block">
-                      {formatCurrency(o.total)}
-                    </span>
-                    <QuickStatusSelect orderId={o.id} status={o.status} />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </Panel>

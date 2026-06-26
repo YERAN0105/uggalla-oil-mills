@@ -171,7 +171,7 @@ export function CustomerDetailClient({ customer }: { customer: CustomerDetail })
       </div>
 
       <Tabs defaultValue="orders">
-        <TabsList className="flex w-full flex-wrap justify-start">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-y-1">
           <TabsTrigger value="orders">Orders</TabsTrigger>
           <TabsTrigger value="bulk">Bulk</TabsTrigger>
           <TabsTrigger value="subs">Subscriptions</TabsTrigger>
@@ -188,13 +188,15 @@ export function CustomerDetailClient({ customer }: { customer: CustomerDetail })
             ) : (
               <ul className="divide-y divide-sand">
                 {c.orders.map((o) => (
-                  <li key={o.id} className="flex items-center justify-between py-2 text-sm">
+                  <li key={o.id} className="flex flex-col gap-1 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                     <Link href={`/admin/orders/${o.order_number}`} className="font-medium text-green hover:underline">
                       {o.order_number}
                     </Link>
-                    <span className="text-muted-foreground">{formatShortDate(o.created_at)}</span>
-                    <Badge variant="secondary" className="text-[10px]">{ORDER_STATUS_LABEL[o.status]}</Badge>
-                    <span className="font-medium text-green-deep">{formatCurrency(o.total)}</span>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="text-muted-foreground">{formatShortDate(o.created_at)}</span>
+                      <Badge variant="secondary" className="text-[10px]">{ORDER_STATUS_LABEL[o.status]}</Badge>
+                      <span className="font-medium text-green-deep">{formatCurrency(o.total)}</span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -209,12 +211,14 @@ export function CustomerDetailClient({ customer }: { customer: CustomerDetail })
             ) : (
               <ul className="divide-y divide-sand">
                 {c.bulkRequests.map((b) => (
-                  <li key={b.id} className="flex items-center justify-between py-2 text-sm">
+                  <li key={b.id} className="flex flex-col gap-1 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                     <Link href={`/admin/bulk-requests/${b.id}`} className="font-medium text-green hover:underline">
                       {b.product_name ?? "Loose oil"} — {b.quantity} {b.unit}
                     </Link>
-                    <Badge variant="secondary" className="text-[10px] capitalize">{b.status.replace("_", " ")}</Badge>
-                    <span className="text-muted-foreground">{formatShortDate(b.created_at)}</span>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <Badge variant="secondary" className="text-[10px] capitalize">{b.status.replace("_", " ")}</Badge>
+                      <span className="text-muted-foreground">{formatShortDate(b.created_at)}</span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -229,11 +233,13 @@ export function CustomerDetailClient({ customer }: { customer: CustomerDetail })
             ) : (
               <ul className="divide-y divide-sand">
                 {c.subscriptions.map((s) => (
-                  <li key={s.id} className="flex items-center justify-between py-2 text-sm">
+                  <li key={s.id} className="flex flex-col gap-1 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                     <span className="font-medium text-green-deep">{s.product_name}</span>
-                    <span className="text-muted-foreground">{INTERVAL_LABEL[s.interval] ?? s.interval}</span>
-                    <Badge variant="secondary" className="text-[10px] capitalize">{s.status}</Badge>
-                    <span className="text-muted-foreground">{formatShortDate(s.next_reminder_date)}</span>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="text-muted-foreground">{INTERVAL_LABEL[s.interval] ?? s.interval}</span>
+                      <Badge variant="secondary" className="text-[10px] capitalize">{s.status}</Badge>
+                      <span className="text-muted-foreground">{formatShortDate(s.next_reminder_date)}</span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -269,11 +275,13 @@ export function CustomerDetailClient({ customer }: { customer: CustomerDetail })
             ) : (
               <ul className="divide-y divide-sand">
                 {c.reviews.map((rv) => (
-                  <li key={rv.id} className="flex items-center justify-between py-2 text-sm">
+                  <li key={rv.id} className="flex flex-col gap-1 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                     <span className="font-medium text-green-deep">{rv.product_name}</span>
-                    <span className="text-gold">{"★".repeat(rv.rating)}</span>
-                    <Badge variant="secondary" className="text-[10px] capitalize">{rv.status}</Badge>
-                    <span className="text-muted-foreground">{formatShortDate(rv.created_at)}</span>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="text-gold">{"★".repeat(rv.rating)}</span>
+                      <Badge variant="secondary" className="text-[10px] capitalize">{rv.status}</Badge>
+                      <span className="text-muted-foreground">{formatShortDate(rv.created_at)}</span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -288,14 +296,17 @@ export function CustomerDetailClient({ customer }: { customer: CustomerDetail })
             ) : (
               <ul className="divide-y divide-sand">
                 {c.loyaltyTx.map((t) => (
-                  <li key={t.id} className="grid grid-cols-[100px_1fr_80px_160px] items-center gap-4 py-2 text-sm">
+                  <li
+                    key={t.id}
+                    className="flex flex-col gap-1 py-2 text-sm sm:grid sm:grid-cols-[100px_1fr_80px_160px] sm:items-center sm:gap-4"
+                  >
                     <span className="capitalize text-green-deep">{t.type}</span>
-                    <span className="text-muted-foreground truncate">{t.note}</span>
-                    <span className={`font-medium text-right ${t.points >= 0 ? "text-green" : "text-red-600"}`}>
+                    <span className="text-muted-foreground sm:truncate">{t.note}</span>
+                    <span className={`font-medium sm:text-right ${t.points >= 0 ? "text-green" : "text-red-600"}`}>
                       {t.points >= 0 ? "+" : ""}
                       {t.points}
                     </span>
-                    <span className="text-xs text-muted-foreground text-right">{formatDateTime(t.created_at)}</span>
+                    <span className="text-xs text-muted-foreground sm:text-right">{formatDateTime(t.created_at)}</span>
                   </li>
                 ))}
               </ul>

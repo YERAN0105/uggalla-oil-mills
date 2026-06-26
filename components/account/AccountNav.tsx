@@ -72,9 +72,9 @@ export function AccountNav() {
         </form>
       </nav>
 
-      {/* Mobile / tablet: horizontal scroll tab strip */}
+      {/* Mobile / tablet: wrapping tab strip */}
       <nav
-        className="lg:hidden -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="lg:hidden flex flex-wrap gap-2 pb-1"
         aria-label="Account navigation"
       >
         {NAV.map((item) => {
