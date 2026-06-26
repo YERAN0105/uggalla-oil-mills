@@ -22,8 +22,15 @@ interface LogoMarqueeProps {
 export function LogoMarquee({ logos, eyebrow = "Trusted & Certified" }: LogoMarqueeProps) {
   if (logos.length === 0) return null;
 
-  // Two copies back-to-back make the -50% translate loop seamlessly.
-  const track = [...logos, ...logos];
+  // A single copy of the logos must be at least as wide as the viewport, or the
+  // -50% loop leaves a visible blank gap mid-scroll (one copy can't fill a wide
+  // screen). With only a handful of short wordmarks that's exactly what happens,
+  // so tile the list up to a minimum count first, then duplicate that filled
+  // copy back-to-back for the seamless -50% translate.
+  const MIN_PER_COPY = 12;
+  const reps = Math.ceil(MIN_PER_COPY / logos.length);
+  const copy = Array.from({ length: reps }, () => logos).flat();
+  const track = [...copy, ...copy];
 
   return (
     <section className="py-10 bg-cream" aria-label="Certifications and partners">
