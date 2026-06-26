@@ -118,8 +118,13 @@
   .animate-marquee {
     animation: marquee-scroll var(--marquee-duration, 40s) linear infinite;
   }
-  .marquee-group:hover .animate-marquee {
-    animation-play-state: paused;
+  /* Pause-on-hover only where a real hovering pointer exists (desktop mouse).
+     On touch screens :hover sticks after a tap, which would freeze the strip
+     until the user taps elsewhere — so scope it out of touch devices. */
+  @media (hover: hover) {
+    .marquee-group:hover .animate-marquee {
+      animation-play-state: paused;
+    }
   }
 }
 
