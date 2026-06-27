@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/brand";
 import type { ProductWithRelations } from "@/types/supabase";
 import { getMinPrice, getSizeDiscount, getDisplayDiscount } from "@/lib/product-utils";
 import { usePdpSize } from "@/components/storefront/PdpPurchase";
+import { useUIStore } from "@/stores/ui";
 
 interface StickyBottomBarProps {
   product: ProductWithRelations;
@@ -17,6 +18,7 @@ interface StickyBottomBarProps {
 export function StickyBottomBar({ product }: StickyBottomBarProps) {
   const [visible, setVisible] = useState(false);
   const { selectedSize } = usePdpSize();
+  const setPdpBarVisible = useUIStore((s) => s.setPdpBarVisible);
   const isBulk = product.purchase_type === "bulk_quote";
   const multiSize = product.product_sizes.length > 1;
 
@@ -34,6 +36,17 @@ export function StickyBottomBar({ product }: StickyBottomBarProps) {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Mirror the bar's visibility to the global UI store so the floating WhatsApp
+  // button can lift above it (mobile only) instead of overlapping it.
+  useEffect(() => {
+    setPdpBarVisible(visible);
+  }, [visible, setPdpBarVisible]);
+
+  // Clear the lift when leaving the product page (this bar unmounts).
+  useEffect(() => {
+    return () => setPdpBarVisible(false);
+  }, [setPdpBarVisible]);
 
   return (
     <AnimatePresence>
