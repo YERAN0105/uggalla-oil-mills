@@ -70,7 +70,7 @@ export function Footer({
           <div className="sm:col-span-2 lg:col-span-1">
             <BrandLogo variant="full" href="/" className="mb-4" />
             <p className="text-sm leading-relaxed text-white/60 mb-5">
-              Pure coconut oil from Padukka, Sri Lanka.
+              Pure, natural oils from Padukka, Sri Lanka.
             </p>
             <div className="flex items-center gap-3">
               {brand.socials.facebook && (
@@ -190,7 +190,7 @@ export function Footer({
             </p>
             <div className="flex items-center gap-1">
               <DropletSVG size={16} className="text-gold/50" />
-              <span>Pure coconut oil from Padukka, Sri Lanka</span>
+              <span>Pure, natural oils from Padukka, Sri Lanka</span>
             </div>
           </div>
         </Container>

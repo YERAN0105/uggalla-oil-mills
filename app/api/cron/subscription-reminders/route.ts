@@ -57,7 +57,7 @@ async function run() {
         name: profile?.name ?? null,
         email,
         phone: profile?.phone ?? null,
-        productName: sub.products?.name ?? "your coconut oil",
+        productName: sub.products?.name ?? "your oil",
         reorderUrl: `${APP_URL}/reorder?sub=${sub.id}`,
       });
 

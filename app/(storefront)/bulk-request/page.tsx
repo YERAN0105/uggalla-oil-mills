@@ -9,7 +9,7 @@ import { Phone, Mail, MapPin } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Bulk Order Request",
-  description: `Request a wholesale or bulk coconut oil quote from ${brand.name}. We supply restaurants, hotels, bakeries, and exporters island-wide.`,
+  description: `Request a wholesale or bulk oil quote from ${brand.name}. We supply restaurants, hotels, bakeries, and exporters island-wide.`,
 };
 
 interface BulkRequestPageProps {
@@ -38,7 +38,7 @@ export default async function BulkRequestPage({ searchParams }: BulkRequestPageP
               Request a Bulk Quote
             </h1>
             <p className="text-white/70 max-w-xl text-sm sm:text-base">
-              Uggalla Oil Mills supplies bulk coconut oil to restaurants, hotels, bakeries, food manufacturers, and exporters across Sri Lanka. Fill in the form and we&apos;ll send you a competitive quote within 24 hours.
+              Uggalla Oil Mills supplies bulk oils to restaurants, hotels, bakeries, food manufacturers, and exporters across Sri Lanka. Fill in the form and we&apos;ll send you a competitive quote within 24 hours.
             </p>
           </FadeIn>
         </Container>
@@ -72,7 +72,7 @@ export default async function BulkRequestPage({ searchParams }: BulkRequestPageP
                 </h3>
                 <ul className="space-y-3 text-sm text-muted-foreground">
                   {[
-                    "Pure, quality coconut oil — consistent in every order",
+                    "Pure, quality oils — consistent in every order",
                     "Volume pricing — the more you order, the better the rate",
                     "20L food-grade cans or custom packaging available",
                     "Island-wide delivery within 2–5 business days",

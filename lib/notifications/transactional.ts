@@ -124,7 +124,7 @@ export async function sendWelcome(input: {
 }): Promise<void> {
   const heading = "Welcome to " + brand.name;
   const paragraphs = [
-    "Thank you for joining us. We bring you pure coconut oil from Padukka, delivered island-wide.",
+    "Thank you for joining us. We bring you pure, natural oils from Padukka, delivered island-wide.",
     "Browse our range of bottles, packets and bulk oil — and earn loyalty points on every order.",
   ];
   await dispatch(
@@ -158,7 +158,7 @@ export async function sendBulkRequestReceived(input: {
   const summary = summarizeBulkItems(input.items);
   // One labelled row per product, so the customer/admin see the full mixed order.
   const itemRows = input.items.map((it) => ({
-    label: it.name?.trim() || "Loose coconut oil",
+    label: it.name?.trim() || "Loose oil",
     value: `${it.quantity} ${it.unit}`,
   }));
   const productCount = input.items.length;
@@ -228,7 +228,7 @@ export async function sendBulkQuoteSent(input: {
   // For WhatsApp's fixed-parameter template: {{2}} product / {{3}} quantity stay
   // single-line. With multiple lines we collapse products into the summary and
   // show the line count as the "quantity" slot so both stay meaningful.
-  const waProduct = input.items.length > 1 ? summary : input.items[0]?.name ?? "Loose coconut oil";
+  const waProduct = input.items.length > 1 ? summary : input.items[0]?.name ?? "Loose oil";
   const waQty =
     input.items.length > 1
       ? `${input.items.length} products`
@@ -236,7 +236,7 @@ export async function sendBulkQuoteSent(input: {
 
   // One labelled row per product, then the quoted total.
   const itemRows = input.items.map((it) => ({
-    label: it.name?.trim() || "Loose coconut oil",
+    label: it.name?.trim() || "Loose oil",
     value: `${it.quantity} ${it.unit}`,
   }));
 

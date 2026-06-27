@@ -22,7 +22,7 @@ import { DropletSVG } from "@/components/shared/DropletSVG";
 import { NewsletterForm } from "@/components/storefront/NewsletterForm";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { JsonLd } from "@/components/shared/JsonLd";
-import { getProducts, getCategories } from "@/lib/products";
+import { getProducts, getBrands } from "@/lib/products";
 import { getHeroBanners } from "@/lib/banners";
 import { HeroCarousel, type HeroSlide } from "@/components/storefront/HeroCarousel";
 import { LogoMarquee, type MarqueeLogo } from "@/components/storefront/LogoMarquee";
@@ -32,12 +32,12 @@ const trustPoints = [
   {
     icon: Leaf,
     title: "100% Pure",
-    description: "Directly from mature Sri Lankan coconuts. No additives, no preservatives.",
+    description: "Pure and unadulterated. No additives, no preservatives, no dilution.",
   },
   {
     icon: Droplets,
     title: "Pure & Natural",
-    description: "Naturally good coconut oil with no additives or preservatives — full of flavour.",
+    description: "Naturally good oils with no additives or preservatives — full of natural goodness.",
   },
   {
     icon: ShieldCheck,
@@ -120,22 +120,23 @@ export default async function HomePage() {
     const fallback = await getProducts({ pageSize: 4 });
     featuredProducts = fallback.products;
   }
-  // Category showcase comes from the database (Admin → Categories). getCategories()
-  // already filters to active only, so hidden categories drop off automatically.
-  const categories = (await getCategories()).map((c) => ({
-    slug: c.slug,
-    name: c.name,
-    description: c.description,
-    image: c.image_url,
-    href: `/shop/category/${c.slug}`,
-    isBulk: c.is_bulk,
+  // Brand showcase comes from the database (Admin → Brands). getBrands() already
+  // filters to active only, so hidden brands drop off automatically. The wholesale
+  // brand shares the company name (lib/brand.ts) — it's the bulk / quote brand, so
+  // it keeps the "Get a Quote" badge.
+  const brandCards = (await getBrands()).map((b) => ({
+    slug: b.slug,
+    name: b.name,
+    image: b.image_url,
+    href: `/shop/brand/${b.slug}`,
+    isBulk: b.name === brand.name,
   }));
 
   // Hero slideshow from Admin → Banners (active "hero" banners, in order). Falls
   // back to a single built-in default slide when there are none. Each field falls
   // back independently, so a banner can change just the image, just the text, etc.
   const DEFAULT_HERO_SUB =
-    "Pure, fresh coconut oil from Padukka to your kitchen — naturally good, with no additives, delivered island-wide.";
+    "Pure, fresh oils from Padukka to your home — naturally good, with no additives, delivered island-wide.";
   const heroBanners = await getHeroBanners();
   const heroSlides: HeroSlide[] =
     heroBanners.length > 0
@@ -219,18 +220,18 @@ export default async function HomePage() {
               <div className="space-y-6">
                 <span className="text-eyebrow">About Us</span>
                 <h2 className="font-display text-4xl text-green-deep leading-tight">
-                  Pure coconut oil<br />
+                  Pure, natural oils<br />
                   <span className="text-green italic">from Padukka</span>
                 </h2>
                 {/* Mobile: image sits right under the heading. */}
                 <div className="lg:hidden">{storeImage}</div>
                 <div className="space-y-4 text-body">
                   <p>
-                    From the heart of Padukka, we bring Sri Lankan homes pure, natural coconut oil —
-                    chosen for its quality and freshness so every drop keeps its natural goodness.
+                    From the heart of Padukka, we bring Sri Lankan homes pure, natural oils —
+                    chosen for their quality and freshness so every drop keeps its natural goodness.
                   </p>
                   <p>
-                    No additives. No preservatives. No shortcuts. Just honest, pure coconut oil
+                    No additives. No preservatives. No shortcuts. Just honest, pure oil
                     the way it was always meant to be.
                   </p>
                 </div>
@@ -254,37 +255,41 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* ── Category Showcase ─────────────────────────────────────────────── */}
-      {categories.length > 0 && (
-        <section className="py-16 bg-sand" aria-label="Product categories">
+      {/* ── Brand Showcase ────────────────────────────────────────────────── */}
+      {brandCards.length > 0 && (
+        <section className="py-16 bg-sand" aria-label="Our brands">
           <Container>
             <FadeIn>
               <div className="text-center mb-10">
-                <span className="text-eyebrow mb-2 block">Our Products</span>
+                <span className="text-eyebrow mb-2 block">Our Brands</span>
                 <h2 className="font-display text-4xl text-green-deep">
-                  Choose your format
+                  Shop by brand
                 </h2>
               </div>
             </FadeIn>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categories.map((cat, i) => (
-                <FadeIn key={cat.slug} delay={i * 0.1}>
+            <div className="flex flex-wrap justify-center gap-6">
+              {brandCards.map((b, i) => (
+                <FadeIn
+                  key={b.slug}
+                  delay={i * 0.1}
+                  className="w-full sm:w-[calc(50%_-_12px)] lg:w-[calc(33.333%_-_16px)]"
+                >
                   <Link
-                    href={cat.href}
+                    href={b.href}
                     className="group block rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 bg-white"
                   >
                     <div className="relative aspect-[4/3] overflow-hidden">
-                      {cat.image ? (
+                      {b.image ? (
                         <Image
-                          src={cat.image}
-                          alt={cat.name}
+                          src={b.image}
+                          alt={b.name}
                           fill
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         />
                       ) : (
-                        // Fallback when a category has no image uploaded yet.
+                        // Fallback when a brand has no image uploaded yet.
                         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-sage to-green/40">
                           <DropletSVG className="h-16 w-16 text-white/50" />
                         </div>
@@ -295,7 +300,7 @@ export default async function HomePage() {
                       {/* Hover scrim — the darker treatment fades in on hover for
                           an interactive emphasis (paired with the image zoom). */}
                       <div className="absolute inset-0 bg-gradient-to-t from-green-deep via-green-deep/55 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                      {cat.isBulk && (
+                      {b.isBulk && (
                         <div className="absolute top-3 right-3">
                           <Badge variant="gold">Get a Quote</Badge>
                         </div>
@@ -303,17 +308,12 @@ export default async function HomePage() {
                       {/* text-shadow (inherited by the children) is the safety net
                           for any bright spot in the image directly under the text. */}
                       <div className="absolute bottom-0 left-0 right-0 p-5 [text-shadow:0_1px_4px_rgba(0,0,0,0.6)]">
-                        <h3 className="font-display text-xl font-semibold text-white">{cat.name}</h3>
-                        {cat.description && (
-                          // Clamp to 2 lines so the label stays tidy; the full
-                          // description is on the category page.
-                          <p className="text-white/85 text-sm line-clamp-2">{cat.description}</p>
-                        )}
+                        <h3 className="font-display text-xl font-semibold text-white">{b.name}</h3>
                       </div>
                     </div>
                     <div className="p-4 flex items-center justify-between">
                       <span className="text-sm font-medium text-green">
-                        {cat.isBulk ? "Browse & request quote" : "Browse products"}
+                        {b.isBulk ? "Browse & request quote" : "Browse products"}
                       </span>
                       <ChevronRight className="h-4 w-4 text-green transition-transform group-hover:translate-x-1" />
                     </div>
@@ -487,7 +487,7 @@ export default async function HomePage() {
                 Get recipes, tips & exclusive offers
               </h2>
               <p className="text-muted-foreground text-sm">
-                Join our newsletter for coconut oil recipes, health tips, and seasonal offers.
+                Join our newsletter for recipes, tips, and seasonal offers.
                 No spam — just pure goodness.
               </p>
               <NewsletterForm />

@@ -134,7 +134,7 @@ export default async function AccountDashboard() {
       {/* Continue shopping */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gold-warm/30 bg-gold/5 p-5">
         <div>
-          <p className="font-display text-green-deep">Running low on pure coconut oil?</p>
+          <p className="font-display text-green-deep">Running low on oil?</p>
           <p className="text-sm text-muted-foreground">Restock from our bottles, packets and bulk range.</p>
         </div>
         <Button asChild variant="gold">

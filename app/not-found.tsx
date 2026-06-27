@@ -35,7 +35,7 @@ export default function NotFound() {
                 Page not found
               </h1>
               <p className="text-muted-foreground text-lg max-w-sm mx-auto">
-                Looks like this page has dried up. Let&apos;s get you back to fresh, pure coconut oil.
+                Looks like this page has dried up. Let&apos;s get you back to fresh, pure oils.
               </p>
             </div>
 
