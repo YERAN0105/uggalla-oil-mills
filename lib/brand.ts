@@ -6,6 +6,15 @@ export const brand = {
   whatsapp: "+94 77 XXX XXXX",
   email: "hello@uggallaoilmills.lk",
   address: "No. 196/B, Mawathagama, Padukka, Sri Lanka",
+  // Direct Google Maps link to the shop's pin — used by "open in Maps" actions
+  // (e.g. the clickable footer address). Paste the shop's share link here (Google
+  // Maps → Share → "Copy link"). Leave blank to fall back to an address search.
+  googleMapsUrl: "https://maps.app.goo.gl/AKYg5Sxx9M1qauGQ8",
+  // Google Maps embed for the Contact page — the shop's pin (no API key needed).
+  // To change it: open the location in Google Maps → Share → "Embed a map" → paste
+  // the URL from the iframe's src="" here. Leave blank to derive from `address`.
+  googleMapsEmbedUrl:
+    "https://www.google.com/maps?q=Uggalla+Oil+Mills,+Mawathagama,+Padukka+10500&output=embed",
   socials: {
     facebook: "",
     instagram: "",

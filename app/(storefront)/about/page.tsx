@@ -16,8 +16,8 @@ export default function AboutPage() {
       <section className="relative py-24 bg-green-deep text-white overflow-hidden">
         <div className="absolute inset-0 opacity-20">
           <Image
-            src="https://images.unsplash.com/photo-1549488344-1f9b8d2bd1f3?w=1400&q=75"
-            alt="Coconut palms"
+            src="/hero.jpeg"
+            alt="Uggalla Oil Mills shop in Padukka, Sri Lanka"
             fill
             className="object-cover"
             sizes="100vw"

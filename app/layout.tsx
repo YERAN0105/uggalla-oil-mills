@@ -25,7 +25,8 @@ export const metadata: Metadata = {
     default: `${brand.name} — ${brand.tagline}`,
     template: `%s | ${brand.name}`,
   },
-  description: brand.tagline,
+  description:
+    "Pure, fresh oils — including coconut, rice bran and sunflower — from Padukka, Sri Lanka. Naturally good, with no additives, delivered island-wide.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   openGraph: {
     siteName: brand.name,

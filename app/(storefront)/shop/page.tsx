@@ -19,7 +19,7 @@ import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Shop",
-  description: `Browse the full range of ${brand.name} oils — Royal Coco bottles and packets, plus bulk wholesale — fresh from Padukka, Sri Lanka.`,
+  description: `Browse ${brand.name} oils including coconut, rice bran and sunflower — Royal Coco bottles and packets, plus bulk wholesale — fresh from Padukka, Sri Lanka.`,
 };
 
 const PAGE_SIZE = 12;
@@ -82,7 +82,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
           <p className="text-white/70 text-sm max-w-xl">
             {hasQuery
               ? `${totalCount} product${totalCount !== 1 ? "s" : ""} found`
-              : "Pure, natural oils — bottles, packets, and bulk wholesale."}
+              : "Pure, natural oils including coconut, rice bran and sunflower — bottles, packets, and bulk wholesale."}
           </p>
           {hasQuery && (
             <Link
