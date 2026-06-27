@@ -17,12 +17,12 @@ import {
   getCategories,
   getBrands,
   getAvailableSizes,
-  getCategoryBySlug,
+  getBrandBySlug,
   type SortOption,
 } from "@/lib/products";
 import { brand } from "@/lib/brand";
 
-interface CategoryPageProps {
+interface BrandPageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
@@ -34,36 +34,40 @@ function getStringArray(value: string | string[] | undefined): string[] {
   return Array.isArray(value) ? value : [value];
 }
 
-export async function generateMetadata({ params }: CategoryPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: BrandPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const category = await getCategoryBySlug(slug);
-  if (!category) return { title: "Category Not Found" };
-  const categoryBrand = category.is_bulk ? brand.name : brand.productBrand;
+  const brandRow = await getBrandBySlug(slug);
+  if (!brandRow) return { title: "Brand Not Found" };
   return {
-    title: category.name,
+    title: brandRow.name,
     description:
-      category.description ??
-      `Browse ${categoryBrand} oil products in the ${category.name} category.`,
+      brandRow.description ?? `Browse ${brandRow.name} oils — fresh from Padukka, Sri Lanka.`,
     openGraph: {
-      images: category.image_url ? [{ url: category.image_url }] : [],
+      images: brandRow.image_url ? [{ url: brandRow.image_url }] : [],
     },
   };
 }
 
-export default async function CategoryPage({ params, searchParams }: CategoryPageProps) {
+export default async function BrandPage({ params, searchParams }: BrandPageProps) {
   const { slug } = await params;
   const sp = await searchParams;
 
-  const [category, allCategories, allBrands, availableSizes] = await Promise.all([
-    getCategoryBySlug(slug),
+  const [brandRow, allCategories, allBrands, availableSizes] = await Promise.all([
+    getBrandBySlug(slug),
     getCategories(),
     getBrands(),
     getAvailableSizes(),
   ]);
 
-  if (!category) notFound();
+  if (!brandRow) notFound();
 
-  const brands = getStringArray(sp.brand);
+  // The wholesale brand shares the company name (see lib/brand.ts) — it's the
+  // bulk / quote brand, so it gets the "Wholesale & Bulk" eyebrow and hides the
+  // category/size filters (bulk products have no sizes). This mirrors the bulk
+  // treatment on the category landing page.
+  const isBulk = brandRow.name === brand.name;
+
+  const categories = getStringArray(sp.category);
   const sizes = getStringArray(sp.size);
   const priceMin = sp.price_min ? Number(sp.price_min) : undefined;
   const priceMax = sp.price_max ? Number(sp.price_max) : undefined;
@@ -72,8 +76,8 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const page = sp.page ? Number(sp.page) : 1;
 
   const { products, totalCount } = await getProducts({
-    categories: [slug],
-    brands,
+    brands: [slug],
+    categories,
     sizes,
     priceMin,
     priceMax,
@@ -90,19 +94,19 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: `${appUrl}/` },
       { "@type": "ListItem", position: 2, name: "Shop", item: `${appUrl}/shop` },
-      { "@type": "ListItem", position: 3, name: category.name, item: `${appUrl}/shop/category/${slug}` },
+      { "@type": "ListItem", position: 3, name: brandRow.name, item: `${appUrl}/shop/brand/${slug}` },
     ],
   };
 
   return (
     <div className="min-h-screen bg-cream">
       <JsonLd data={breadcrumbLd} />
-      {/* Category hero */}
+      {/* Brand hero */}
       <div className="relative bg-green-deep text-white overflow-hidden">
-        {category.image_url && (
+        {brandRow.image_url && (
           <Image
-            src={category.image_url}
-            alt={category.name}
+            src={brandRow.image_url}
+            alt={brandRow.name}
             fill
             className="object-cover opacity-20"
             sizes="100vw"
@@ -116,17 +120,17 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
               <ChevronRight className="h-3 w-3" />
               <li><Link href="/shop" className="hover:text-white transition-colors">Shop</Link></li>
               <ChevronRight className="h-3 w-3" />
-              <li className="text-white font-medium">{category.name}</li>
+              <li className="text-white font-medium">{brandRow.name}</li>
             </ol>
           </nav>
           <span className="text-gold text-xs font-semibold uppercase tracking-widest">
-            {category.is_bulk ? brand.name : brand.productBrand}
+            {isBulk ? "Wholesale & Bulk" : "Our Range"}
           </span>
           <h1 className="font-display text-3xl sm:text-4xl font-semibold mt-1 mb-2">
-            {category.name}
+            {brandRow.name}
           </h1>
-          {category.description && (
-            <p className="text-white/70 text-sm max-w-xl">{category.description}</p>
+          {brandRow.description && (
+            <p className="text-white/70 text-sm max-w-xl">{brandRow.description}</p>
           )}
         </Container>
       </div>
@@ -141,9 +145,9 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                   categories={allCategories}
                   brands={allBrands}
                   availableSizes={availableSizes}
-                  hideCategories
                   hideBrands
-                  hideSizes={category.is_bulk}
+                  hideCategories={isBulk}
+                  hideSizes={isBulk}
                 />
               </Suspense>
             </div>
@@ -160,9 +164,9 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                     categories={allCategories}
                     brands={allBrands}
                     availableSizes={availableSizes}
-                    hideCategories
                     hideBrands
-                    hideSizes={category.is_bulk}
+                    hideCategories={isBulk}
+                    hideSizes={isBulk}
                   />
                 </Suspense>
                 <Suspense fallback={null}>
@@ -177,11 +181,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
             {totalCount > PAGE_SIZE && (
               <Suspense fallback={null}>
-                <Pagination
-                  totalCount={totalCount}
-                  pageSize={PAGE_SIZE}
-                  currentPage={page}
-                />
+                <Pagination totalCount={totalCount} pageSize={PAGE_SIZE} currentPage={page} />
               </Suspense>
             )}
           </div>

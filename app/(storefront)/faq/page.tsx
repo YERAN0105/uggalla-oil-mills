@@ -10,12 +10,12 @@ export const metadata: Metadata = {
 
 const faqs = [
   {
-    q: "What makes Uggalla Oil Mills coconut oil different?",
-    a: "Our coconut oil is pure and natural — made from quality Sri Lankan coconuts, with no chemicals, no additives, and no preservatives. We focus on freshness and quality in every bottle.",
+    q: "What makes Uggalla Oil Mills oils different?",
+    a: "Our oils are pure and natural — sourced from quality Sri Lankan produce, with no chemicals, no additives, and no preservatives. We focus on freshness and quality in every bottle.",
   },
   {
-    q: "Is your coconut oil suitable for cooking?",
-    a: "Absolutely. Our coconut oil is excellent for frying, sautéing, baking, and as a finishing oil. It has a high smoke point and a clean, natural flavour that enhances Sri Lankan cuisine.",
+    q: "Which of your oils can I cook with?",
+    a: "Our cooking oils — such as coconut, sunflower, and rice bran — are excellent for frying, sautéing, baking, and finishing dishes, with a clean, natural flavour that suits Sri Lankan cuisine. Specialty products like hair oil and lamp oil are not edible and should never be used for cooking; each product page makes this clear.",
   },
   {
     q: "Do you deliver island-wide?",
@@ -35,7 +35,7 @@ const faqs = [
   },
   {
     q: "How long does the oil keep?",
-    a: "Properly stored in a cool, dry place, our coconut oil stays fresh for 12–18 months from the production date. You'll find the best-before date on each bottle.",
+    a: "Shelf life varies by oil type. Stored in a cool, dry place, our oils typically stay fresh for 12–18 months from the production date — check the best-before date on each bottle.",
   },
   {
     q: "What sizes do you offer?",

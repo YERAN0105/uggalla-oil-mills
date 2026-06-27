@@ -86,7 +86,7 @@ export function CartDrawer() {
                 <div>
                   <p className="font-display text-xl text-green-deep">Your cart is empty</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Add some pure coconut oil to get started.
+                    Add some pure oil to get started.
                   </p>
                 </div>
                 <Button asChild onClick={closeDrawer}>

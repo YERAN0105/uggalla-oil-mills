@@ -28,7 +28,7 @@ export default function AboutPage() {
             <span className="text-eyebrow text-gold/80 mb-3 block">Our Story</span>
             <h1 className="font-display text-5xl font-bold mb-4">About Uggalla Oil Mills</h1>
             <p className="text-white/70 max-w-xl text-lg">
-              From the heart of Padukka, Sri Lanka — pure coconut oil for every home.
+              From the heart of Padukka, Sri Lanka — pure, natural oils for every home.
             </p>
           </FadeIn>
         </Container>
@@ -42,23 +42,24 @@ export default function AboutPage() {
               <h2 className="font-display text-3xl text-green-deep">Who We Are</h2>
               <p>
                 Uggalla Oil Mills is a Padukka-based shop bringing Sri Lankan homes pure, premium
-                coconut oil. What started small has grown into a name our customers trust for
+                oils — coconut, sunflower and rice bran for the kitchen, plus specialty oils such as
+                hair oil and lamp oil. What started small has grown into a name our customers trust for
                 quality and honest value.
               </p>
               <p>
                 We&apos;re selective about quality — every product on our shelves is chosen for its
-                purity, freshness, and flavour, so you get coconut oil you can feel good about
-                cooking with.
+                purity and freshness, so you get oils you can feel good about bringing into
+                your home.
               </p>
               <h2 className="font-display text-3xl text-green-deep">Our Promise</h2>
               <p>
-                We believe good coconut oil should be simple and honest. No additives. No
+                We believe good oil should be simple and honest. No additives. No
                 preservatives. No shortcuts — just pure oil and fair prices, delivered fresh to
                 your door across Sri Lanka.
               </p>
               <p>
                 Our retail brand, <strong>Royal Coco</strong>, brings you carefully selected
-                coconut oil in convenient bottle and packet formats for homes across Sri Lanka.
+                oils in convenient bottle and packet formats for homes across Sri Lanka.
               </p>
             </div>
           </FadeIn>

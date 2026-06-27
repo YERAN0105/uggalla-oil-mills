@@ -153,7 +153,7 @@ export default async function QuotePage({ params }: { params: Promise<{ token: s
                   {items.map((it, i) => (
                     <li key={i} className="flex items-center justify-between gap-2">
                       <span className="font-medium text-green-deep">
-                        {it.name ?? "Loose coconut oil"}
+                        {it.name ?? "Loose oil"}
                       </span>
                       <span className="text-green-deep">
                         {it.quantity} {it.unit}

@@ -115,7 +115,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
               {slide.headline ?? (
                 <>
                   Sri Lanka&apos;s finest
-                  <span className="block text-gold">coconut oil</span>
+                  <span className="block text-gold">pure oils</span>
                 </>
               )}
             </h1>

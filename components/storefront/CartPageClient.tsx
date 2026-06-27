@@ -100,7 +100,7 @@ export function CartPageClient() {
           <DropletSVG className="mx-auto h-20 w-20 text-sage" />
           <h1 className="font-display text-3xl text-green-deep">Your cart is empty</h1>
           <p className="text-muted-foreground">
-            Looks like you haven&apos;t added any pure coconut oil yet. Let&apos;s fix that.
+            Looks like you haven&apos;t added any oil yet. Let&apos;s fix that.
           </p>
           <Button asChild size="lg">
             <Link href="/shop">Browse our oils</Link>

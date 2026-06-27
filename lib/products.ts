@@ -274,6 +274,17 @@ export async function getBrands(): Promise<Brand[]> {
   return data ?? [];
 }
 
+export async function getBrandBySlug(slug: string): Promise<Brand | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("brands")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .single();
+  return data ?? null;
+}
+
 export async function getAvailableSizes(): Promise<string[]> {
   const supabase = await createClient();
   const { data } = await supabase

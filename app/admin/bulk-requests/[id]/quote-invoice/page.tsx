@@ -127,7 +127,7 @@ export default async function QuoteInvoicePage({
             <tbody>
               {r.items.map((it, i) => (
                 <tr key={i} className="border-b border-sand/60">
-                  <td className="py-2.5 pr-2 font-medium">{it.name ?? "Loose coconut oil"}</td>
+                  <td className="py-2.5 pr-2 font-medium">{it.name ?? "Loose oil"}</td>
                   <td className="py-2.5 text-right">
                     {it.quantity} {it.unit}
                   </td>

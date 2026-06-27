@@ -7,7 +7,7 @@ export type { BulkRequestItem };
 
 /** Human label for a single line, e.g. "Coconut Oil — 200 litres". */
 export function bulkItemLabel(item: BulkRequestItem): string {
-  const name = item.name?.trim() || "Loose coconut oil";
+  const name = item.name?.trim() || "Loose oil";
   return `${name} — ${item.quantity} ${item.unit}`;
 }
 
@@ -54,20 +54,20 @@ export function normalizeBulkItems(
 export function summarizeBulkItems(items: BulkRequestItem[]): string {
   if (items.length === 0) return "Bulk oil";
   return items
-    .map((i) => `${i.name?.trim() || "Loose coconut oil"} ${i.quantity} ${i.unit}`)
+    .map((i) => `${i.name?.trim() || "Loose oil"} ${i.quantity} ${i.unit}`)
     .join(", ");
 }
 
 /** Compact "Coconut Oil +2 more" label for the admin list product column. */
 export function shortBulkItemsLabel(items: BulkRequestItem[]): string {
   if (items.length === 0) return "—";
-  const first = items[0].name?.trim() || "Loose coconut oil";
+  const first = items[0].name?.trim() || "Loose oil";
   return items.length > 1 ? `${first} +${items.length - 1} more` : first;
 }
 
 /** Order line label for a converted bulk request (single summarizing line). */
 export function bulkOrderLineLabel(items: BulkRequestItem[]): string {
-  if (items.length === 0) return "Bulk: Loose coconut oil";
+  if (items.length === 0) return "Bulk: Loose oil";
   if (items.length === 1) return `Bulk: ${bulkItemLabel(items[0])}`;
   return `Bulk order (${items.length} items): ${summarizeBulkItems(items)}`;
 }
