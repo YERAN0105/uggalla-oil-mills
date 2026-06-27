@@ -33,6 +33,12 @@ export function Footer({
     { href: "/about", label: "About Us" },
   ];
 
+  // "Open in Google Maps" target for the clickable address — the shop's pinned
+  // location if configured, otherwise a search of the displayed address.
+  const mapsUrl =
+    brand.googleMapsUrl ||
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopInfo.address)}`;
+
   return (
     <footer className="bg-green-deep text-white/80" aria-label="Site footer">
       {/* Newsletter band */}
@@ -154,9 +160,16 @@ export function Footer({
               Contact
             </h4>
             <ul className="space-y-3">
-              <li className="flex items-start gap-2 text-sm text-white/60">
-                <MapPin className="h-4 w-4 text-gold mt-0.5 flex-shrink-0" />
-                {shopInfo.address}
+              <li>
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-2 text-sm text-white/60 hover:text-gold transition-colors"
+                >
+                  <MapPin className="h-4 w-4 text-gold mt-0.5 flex-shrink-0" />
+                  {shopInfo.address}
+                </a>
               </li>
               <li>
                 <a

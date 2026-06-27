@@ -136,7 +136,7 @@ export default async function HomePage() {
   // back to a single built-in default slide when there are none. Each field falls
   // back independently, so a banner can change just the image, just the text, etc.
   const DEFAULT_HERO_SUB =
-    "Pure, fresh oils from Padukka to your home — naturally good, with no additives, delivered island-wide.";
+    "Pure, fresh oils — including coconut, rice bran and sunflower — from Padukka to your home. Naturally good, with no additives, delivered island-wide.";
   const heroBanners = await getHeroBanners();
   const heroSlides: HeroSlide[] =
     heroBanners.length > 0
