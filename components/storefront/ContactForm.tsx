@@ -23,7 +23,7 @@ export function ContactForm() {
       toast.error(res.error);
       return;
     }
-    toast.success("Thanks for reaching out — we'll be in touch soon.");
+    toast.success("Thanks for reaching out. We'll be in touch soon.");
     setF(EMPTY);
   };
 

@@ -54,8 +54,8 @@ export default function TermsPage() {
               <p>
                 If you receive a damaged, defective, or incorrect item, please contact us within
                 48 hours of delivery. As our products are food items, we do not accept change-of-mind
-                returns. Full details — including how to make a claim, refund timing, and
-                cancellations — are set out in our{" "}
+                returns. Full details, including how to make a claim, refund timing, and
+                cancellations, are set out in our{" "}
                 <a href="/refund-policy" className="text-green hover:underline">
                   Return &amp; Refund Policy
                 </a>
@@ -64,7 +64,7 @@ export default function TermsPage() {
 
               <h2 className="font-display text-2xl text-green-deep">5. Intellectual Property</h2>
               <p>
-                All content on this website — including text, images, logos, and design — is the
+                All content on this website, including text, images, logos, and design, is the
                 property of {brand.name} and may not be reproduced without written permission.
               </p>
 

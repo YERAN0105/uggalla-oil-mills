@@ -11,11 +11,11 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "What makes Uggalla Oil Mills oils different?",
-    a: "Our oils are pure and natural — sourced from quality Sri Lankan produce, with no chemicals, no additives, and no preservatives. We focus on freshness and quality in every bottle.",
+    a: "Our oils are pure and natural, sourced from quality Sri Lankan produce, with no chemicals, no additives, and no preservatives. We focus on freshness and quality in every bottle.",
   },
   {
     q: "Which of your oils can I cook with?",
-    a: "Our cooking oils — such as coconut, sunflower, and rice bran — are excellent for frying, sautéing, baking, and finishing dishes, with a clean, natural flavour that suits Sri Lankan cuisine. Specialty products like hair oil and lamp oil are not edible and should never be used for cooking; each product page makes this clear.",
+    a: "Our cooking oils, such as coconut, sunflower, and rice bran, are excellent for frying, sautéing, baking, and finishing dishes, with a clean, natural flavour that suits Sri Lankan cuisine. Specialty products like hair oil and lamp oil are not edible and should never be used for cooking; each product page makes this clear.",
   },
   {
     q: "Do you deliver island-wide?",
@@ -35,7 +35,7 @@ const faqs = [
   },
   {
     q: "How long does the oil keep?",
-    a: "Shelf life varies by oil type. Stored in a cool, dry place, our oils typically stay fresh for 12–18 months from the production date — check the best-before date on each bottle.",
+    a: "Shelf life varies by oil type. Stored in a cool, dry place, our oils typically stay fresh for 12–18 months from the production date. Check the best-before date on each bottle.",
   },
   {
     q: "What sizes do you offer?",

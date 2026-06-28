@@ -104,12 +104,11 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
       <Container className="relative z-10 py-24">
         <FadeIn>
           <div className="max-w-2xl">
-            <span className="text-eyebrow mb-4 block text-gold/80">Pure · Natural · Premium</span>
             <h1 className="mb-6 font-display text-5xl font-bold leading-tight text-white sm:text-6xl lg:text-7xl">
               {slide.headline ?? (
                 <>
-                  Sri Lanka&apos;s finest
-                  <span className="block text-gold">pure oils</span>
+                  Sri Lanka&apos;s Finest
+                  <span className="block text-gold">Pure Oils</span>
                 </>
               )}
             </h1>

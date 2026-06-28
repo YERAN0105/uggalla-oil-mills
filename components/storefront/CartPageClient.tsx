@@ -126,7 +126,7 @@ export function CartPageClient() {
         <div className="mb-6 flex items-start gap-2 rounded-xl border border-gold-warm/40 bg-gold/10 p-4 text-sm text-green-deep">
           <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-gold-warm" />
           <p>
-            Some items are low in stock — we recommend checking out soon to avoid disappointment.
+            Some items are low in stock. We recommend checking out soon to avoid disappointment.
           </p>
         </div>
       )}

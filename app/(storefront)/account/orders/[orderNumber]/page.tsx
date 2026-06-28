@@ -100,7 +100,7 @@ export default async function OrderDetailPage({ params }: PageProps) {
             <div className="flex items-start gap-3">
               <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green" />
               <div>
-                <p className="font-semibold text-green-deep">Receipt received — we&apos;re verifying your payment</p>
+                <p className="font-semibold text-green-deep">Receipt received. We&apos;re verifying your payment</p>
                 <p className="mt-0.5 text-sm text-muted-foreground">
                   We&apos;ll confirm your order once the transfer is verified. This usually takes 1–2 business days.
                 </p>
