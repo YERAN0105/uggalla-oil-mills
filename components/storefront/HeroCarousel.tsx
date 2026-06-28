@@ -7,7 +7,6 @@ import { ChevronRight, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/shared/Container";
 import { FadeIn } from "@/components/shared/FadeIn";
-import { DropletSVG } from "@/components/shared/DropletSVG";
 import { cn } from "@/lib/utils";
 
 export type HeroSlide = {
@@ -100,11 +99,6 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
           );
         })}
         <div className="absolute inset-0 bg-gradient-to-r from-green-deep/90 via-green-deep/60 to-transparent" />
-      </div>
-
-      {/* Decorative droplet */}
-      <div className="absolute right-8 top-1/4 hidden opacity-10 lg:block" aria-hidden="true">
-        <DropletSVG size={300} className="text-gold" />
       </div>
 
       <Container className="relative z-10 py-24">
