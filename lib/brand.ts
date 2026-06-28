@@ -16,7 +16,7 @@ export const brand = {
   googleMapsEmbedUrl:
     "https://www.google.com/maps?q=Uggalla+Oil+Mills,+Mawathagama,+Padukka+10500&output=embed",
   socials: {
-    facebook: "",
+    facebook: "https://www.facebook.com/people/Uggalla-oil-mills/61580270436829/",
     instagram: "",
     tiktok: "",
   },
