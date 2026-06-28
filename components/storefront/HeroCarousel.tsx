@@ -63,7 +63,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
           const alt = s.headline ?? "Uggalla Oil Mills shop in Padukka, Sri Lanka";
           const base = cn(
             "object-cover object-center transition-opacity duration-700",
-            i === active ? "opacity-100" : "opacity-0"
+            i === active ? "opacity-40" : "opacity-0"
           );
           return (
             <Fragment key={i}>
@@ -99,6 +99,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
             </Fragment>
           );
         })}
+        <div className="absolute inset-0 bg-gradient-to-r from-green-deep/90 via-green-deep/60 to-transparent" />
       </div>
 
       {/* Decorative droplet */}
@@ -109,8 +110,8 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
       <Container className="relative z-10 py-24">
         <FadeIn>
           <div className="max-w-2xl">
-            <span className="text-eyebrow mb-4 block text-gold/80 [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">Pure · Natural · Premium</span>
-            <h1 className="mb-6 font-display text-5xl font-bold leading-tight text-white sm:text-6xl lg:text-7xl [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">
+            <span className="text-eyebrow mb-4 block text-gold/80">Pure · Natural · Premium</span>
+            <h1 className="mb-6 font-display text-5xl font-bold leading-tight text-white sm:text-6xl lg:text-7xl">
               {slide.headline ?? (
                 <>
                   Sri Lanka&apos;s finest
@@ -118,7 +119,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
                 </>
               )}
             </h1>
-            <p className="mb-8 max-w-lg text-lg leading-relaxed text-white/70 [text-shadow:0_2px_12px_rgba(0,0,0,0.55)]">{slide.subheadline}</p>
+            <p className="mb-8 max-w-lg text-lg leading-relaxed text-white/70">{slide.subheadline}</p>
             <div className="flex flex-wrap gap-4">
               <Button size="xl" variant="gold" asChild>
                 <Link href={slide.ctaLink}>
