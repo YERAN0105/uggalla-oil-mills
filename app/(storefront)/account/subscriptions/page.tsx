@@ -21,7 +21,7 @@ export default async function SubscriptionsPage() {
 
       {/* How it works */}
       <div className="mb-5 grid gap-3 rounded-2xl border border-sage/60 bg-sage/10 p-5 sm:grid-cols-3">
-        <Explainer icon={<Bell className="h-4 w-4" />} title="We remind you" body="A gentle nudge on your schedule — weekly, fortnightly, or monthly." />
+        <Explainer icon={<Bell className="h-4 w-4" />} title="We remind you" body="A gentle nudge on your schedule: weekly, fortnightly, or monthly." />
         <Explainer icon={<RefreshCcw className="h-4 w-4" />} title="Reorder in one tap" body="Each reminder pre-fills your cart with the same product and size." />
         <Explainer icon={<ShieldCheck className="h-4 w-4" />} title="Never auto-charged" body="You always check out yourself. We never store or charge a card." />
       </div>

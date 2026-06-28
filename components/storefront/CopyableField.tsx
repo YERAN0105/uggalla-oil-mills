@@ -23,7 +23,7 @@ export function CopyableField({ label, value, copyable }: CopyableFieldProps) {
       toast.success(`${label} copied`);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Couldn't copy — please copy it manually.");
+      toast.error("Couldn't copy. Please copy it manually.");
     }
   };
 

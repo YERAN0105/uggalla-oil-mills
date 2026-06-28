@@ -72,12 +72,12 @@ export default async function BulkRequestPage({ searchParams }: BulkRequestPageP
                 </h3>
                 <ul className="space-y-3 text-sm text-muted-foreground">
                   {[
-                    "Pure, quality oils — consistent in every order",
-                    "Volume pricing — the more you order, the better the rate",
+                    "Pure, quality oils: consistent in every order",
+                    "Volume pricing: the more you order, the better the rate",
                     "20L food-grade cans or custom packaging available",
                     "Island-wide delivery within 2–5 business days",
                     "Export-ready documentation on request",
-                    "Consistent quality — same batch, same standards",
+                    "Consistent quality: same batch, same standards",
                   ].map((point) => (
                     <li key={point} className="flex items-start gap-2">
                       <span className="mt-1 h-1.5 w-1.5 rounded-full bg-green flex-shrink-0" />

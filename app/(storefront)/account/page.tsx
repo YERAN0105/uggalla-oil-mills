@@ -41,7 +41,7 @@ export default async function AccountDashboard() {
         </div>
         <h1 className="mt-2 font-display text-3xl">Hello, {data.firstName}</h1>
         <p className="mt-1 text-sm text-white/80">
-          Manage your orders, reminders, and rewards — all in one place.
+          Manage your orders, reminders, and rewards, all in one place.
         </p>
       </div>
 

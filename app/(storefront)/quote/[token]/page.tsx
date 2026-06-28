@@ -81,7 +81,7 @@ export default async function QuotePage({ params }: { params: Promise<{ token: s
       <Shell title={paid ? "Already paid" : "Order started"}>
         <p className="mt-2 text-muted-foreground">
           {paid
-            ? "This quote has already been paid — thank you!"
+            ? "This quote has already been paid. Thank you!"
             : "An order was already created from this quote."}
         </p>
         {orderNumber ? (

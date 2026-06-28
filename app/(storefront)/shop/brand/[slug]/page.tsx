@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: BrandPageProps): Promise<Meta
   return {
     title: brandRow.name,
     description:
-      brandRow.description ?? `Browse ${brandRow.name} oils — fresh from Padukka, Sri Lanka.`,
+      brandRow.description ?? `Browse ${brandRow.name} oils, fresh from Padukka, Sri Lanka.`,
     openGraph: {
       images: brandRow.image_url ? [{ url: brandRow.image_url }] : [],
     },

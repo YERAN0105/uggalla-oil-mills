@@ -19,7 +19,7 @@ import { brand } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: "Sale",
-  description: `Discounted ${brand.name} oils — shop products currently on offer while stocks last.`,
+  description: `Discounted ${brand.name} oils. Shop products currently on offer while stocks last.`,
 };
 
 const PAGE_SIZE = 12;
@@ -78,7 +78,7 @@ export default async function SalePage({ searchParams }: SalePageProps) {
             Special Offers
           </h1>
           <p className="text-white/70 text-sm max-w-xl">
-            Grab our oils at a discount — limited-time prices while stocks last.
+            Grab our oils at a discount. Limited-time prices while stocks last.
           </p>
         </Container>
       </div>

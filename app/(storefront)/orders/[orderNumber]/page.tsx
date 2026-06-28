@@ -93,7 +93,7 @@ export default async function OrderViewPage({ params, searchParams }: PageProps)
           {canLogInToManage && (
             <div className="mb-8 flex flex-col items-start gap-3 rounded-2xl border border-sage/60 bg-sage/10 p-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-green-deep">
-                This is your order. Log in to manage it — cancel, reorder, or track all your orders.
+                This is your order. Log in to manage it: cancel, reorder, or track all your orders.
               </p>
               <Button asChild className="flex-shrink-0">
                 <Link href={`/login?redirect=/account/orders/${order.order_number}`}>
@@ -115,7 +115,7 @@ export default async function OrderViewPage({ params, searchParams }: PageProps)
                   <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green" />
                   <div>
                     <p className="font-semibold text-green-deep">
-                      Receipt received — we&apos;re verifying your payment
+                      Receipt received. We&apos;re verifying your payment
                     </p>
                     <p className="mt-0.5 text-sm text-muted-foreground">
                       We&apos;ll confirm your order once the transfer is verified. This usually takes 1–2

@@ -38,7 +38,7 @@ export default async function ContactPage() {
                 <h2 className="font-display text-3xl text-green-deep">We&apos;d love to hear from you</h2>
                 <p className="text-body">
                   Whether you have a question about our products, need a bulk quote, or just want
-                  to say hello — reach out and we&apos;ll get back to you as quickly as possible.
+                  to say hello. Reach out and we&apos;ll get back to you as quickly as possible.
                 </p>
 
                 <div className="space-y-5">

@@ -64,7 +64,7 @@ export function BankReceiptUpload({
         return;
       }
       setDone(true);
-      toast.success("Receipt uploaded — we'll verify it shortly.");
+      toast.success("Receipt uploaded. We'll verify it shortly.");
       onUploaded?.();
       // Re-render server components (e.g. the order-success page) so the status
       // reflects "Payment under review". Harmless on client-state pages.
@@ -83,7 +83,7 @@ export function BankReceiptUpload({
       return (
         <div className="flex items-center gap-2 rounded-xl border border-green/30 bg-green/5 p-3 text-sm text-green-deep">
           <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin text-green" />
-          <span>Receipt uploaded — updating your order…</span>
+          <span>Receipt uploaded, updating your order…</span>
         </div>
       );
     }

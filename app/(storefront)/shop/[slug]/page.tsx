@@ -232,7 +232,7 @@ export default async function ProductDetailPage({ params }: PDPProps) {
                 </a>
               ) : (
                 <a href="#reviews" className="text-xs text-muted-foreground hover:text-green transition-colors w-fit underline underline-offset-2">
-                  No reviews yet — be the first
+                  No reviews yet. Be the first
                 </a>
               )}
 
@@ -351,7 +351,7 @@ export default async function ProductDetailPage({ params }: PDPProps) {
                         <li>• Ideal as a butter substitute in baking</li>
                         <li>• Apply directly to skin and hair as a natural moisturiser</li>
                         <li>• Store in a cool, dry place away from direct sunlight</li>
-                        <li>• Natural solidification below 24°C is normal — gently warm to liquefy</li>
+                        <li>• Natural solidification below 24°C is normal; gently warm to liquefy</li>
                       </ul>
                     </AccordionContent>
                   </AccordionItem>

@@ -158,7 +158,7 @@ export default async function BulkRequestsPage() {
                               View order {req.converted_order_number} →
                             </Link>
                           ) : (
-                            "Order created — we'll be in touch."
+                            "Order created. We'll be in touch."
                           )}
                         </p>
                       ) : req.payment_mode === "online" ? (
@@ -169,7 +169,7 @@ export default async function BulkRequestsPage() {
                         ) : (
                           <p className="text-sm text-muted-foreground">
                             {expired
-                              ? "This payment link has expired — please contact us to arrange payment."
+                              ? "This payment link has expired. Please contact us to arrange payment."
                               : "Online payment will be available shortly."}
                           </p>
                         )

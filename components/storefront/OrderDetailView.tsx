@@ -52,7 +52,7 @@ const INTERVAL_LABEL: Record<string, string> = {
 function paymentStatusLabel(order: OrderWithItems): string {
   if (order.status === "cancelled" && order.payment_status === "pending_transfer") return "Not paid";
   if (order.payment_method === "bank_transfer" && order.payment_status === "pending_transfer") {
-    if (order.bank_receipt?.status === "rejected") return "Receipt rejected — please re-upload";
+    if (order.bank_receipt?.status === "rejected") return "Receipt rejected, please re-upload";
     if (order.bank_receipt) return "Payment under review";
     return "Awaiting bank transfer";
   }

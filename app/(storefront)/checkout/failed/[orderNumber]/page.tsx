@@ -26,7 +26,7 @@ export default async function CheckoutFailedPage({ params }: FailedPageProps) {
           <h1 className="font-display text-3xl text-green-deep">Payment not completed</h1>
           <p className="text-muted-foreground">
             Your payment for order <span className="font-semibold text-green-deep">{orderNumber}</span> was
-            cancelled or didn&apos;t go through. Don&apos;t worry — your order is saved and no charge was made.
+            cancelled or didn&apos;t go through. Don&apos;t worry, your order is saved and no charge was made.
             You can try paying again or choose another payment method.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">

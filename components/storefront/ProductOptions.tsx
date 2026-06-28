@@ -74,7 +74,7 @@ export function ProductOptions({ product }: ProductOptionsProps) {
       // The server drops the subscription opt-in for guests — nudge them to log in.
       if (wantsSubscription && !result.item.isSubscription) {
         toast.success("Added to cart", {
-          description: "Sign in to set a reorder reminder — added without a subscription for now.",
+          description: "Sign in to set a reorder reminder (added without a subscription for now).",
           action: { label: "Sign in", onClick: () => router.push("/login?redirect=/cart") },
         });
       } else {
@@ -255,7 +255,7 @@ export function ProductOptions({ product }: ProductOptionsProps) {
                 <Bell className="h-3.5 w-3.5 text-green" />
                 Remind me to reorder
               </p>
-              <p className="text-xs text-muted-foreground">Never run out — we&apos;ll send you a reminder</p>
+              <p className="text-xs text-muted-foreground">Never run out. We&apos;ll send you a reminder</p>
             </div>
           </label>
 

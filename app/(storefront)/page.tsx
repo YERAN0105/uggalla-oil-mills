@@ -37,7 +37,7 @@ const trustPoints = [
   {
     icon: Droplets,
     title: "Pure & Natural",
-    description: "Naturally good oils with no additives or preservatives — full of natural goodness.",
+    description: "Naturally good oils with no additives or preservatives, full of natural goodness.",
   },
   {
     icon: ShieldCheck,
@@ -83,7 +83,7 @@ const howItWorks = [
     step: "2",
     icon: Package,
     title: "Place your order",
-    description: "Secure checkout with your preferred payment method — PayHere, bank transfer, or COD.",
+    description: "Secure checkout with your preferred payment method: PayHere, bank transfer, or COD.",
   },
   {
     step: "3",
@@ -97,19 +97,19 @@ const testimonials = [
   {
     name: "Amali P.",
     location: "Colombo 7",
-    text: "The freshest coconut oil I've ever bought. You can actually smell the difference — pure, clean, and rich. My family won't use anything else.",
+    text: "The freshest coconut oil I've ever bought. You can actually smell the difference: pure, clean, and rich. My family won't use anything else.",
     rating: 5,
   },
   {
     name: "Roshan K.",
     location: "Kandy",
-    text: "We buy in bulk for our restaurant. Uggalla Oil Mills have been reliable every time — quality is consistent and the pricing is fair.",
+    text: "We buy in bulk for our restaurant. Uggalla Oil Mills have been reliable every time. Quality is consistent and the pricing is fair.",
     rating: 5,
   },
   {
     name: "Dilani S.",
     location: "Galle",
-    text: "Love the reorder reminder feature. I set it once and never run out of oil. Fast delivery too — arrived the next morning!",
+    text: "Love the reorder reminder feature. I set it once and never run out of oil. Fast delivery too. Arrived the next morning!",
     rating: 5,
   },
 ];
@@ -136,7 +136,7 @@ export default async function HomePage() {
   // back to a single built-in default slide when there are none. Each field falls
   // back independently, so a banner can change just the image, just the text, etc.
   const DEFAULT_HERO_SUB =
-    "Pure, fresh oils — including coconut, rice bran and sunflower — from Padukka to your home. Naturally good, with no additives, delivered island-wide.";
+    "Pure, fresh coconut, rice bran and sunflower oils from Padukka to your home. Naturally good, no additives, delivered island-wide.";
   const heroBanners = await getHeroBanners();
   const heroSlides: HeroSlide[] =
     heroBanners.length > 0
@@ -227,7 +227,7 @@ export default async function HomePage() {
                 <div className="lg:hidden">{storeImage}</div>
                 <div className="space-y-4 text-body">
                   <p>
-                    From the heart of Padukka, we bring Sri Lankan homes pure, natural oils —
+                    From the heart of Padukka, we bring Sri Lankan homes pure, natural oils,
                     chosen for their quality and freshness so every drop keeps its natural goodness.
                   </p>
                   <p>
@@ -488,7 +488,7 @@ export default async function HomePage() {
               </h2>
               <p className="text-muted-foreground text-sm">
                 Join our newsletter for recipes, tips, and seasonal offers.
-                No spam — just pure goodness.
+                No spam, just pure goodness.
               </p>
               <NewsletterForm />
               <p className="text-xs text-muted-foreground">

@@ -28,7 +28,7 @@ export default function RefundPolicyPage() {
               <p className="text-muted-foreground italic">
                 Because our products are food items (edible oils), we are unable to accept
                 returns for change of mind or once a product has been opened or used. We do,
-                however, stand fully behind the quality of every order — if something arrives
+                however, stand fully behind the quality of every order. If something arrives
                 damaged, defective, or incorrect, we will make it right.
               </p>
 

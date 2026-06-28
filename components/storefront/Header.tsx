@@ -83,7 +83,7 @@ export function Header({
             {promo.headline}
             {promo.cta_text && promo.cta_link ? (
               <>
-                {" — "}
+                {" · "}
                 <Link
                   href={promo.cta_link}
                   className="font-semibold underline underline-offset-2 hover:text-gold transition-colors"
@@ -95,7 +95,7 @@ export function Header({
           </>
         ) : (
           <>
-            {brand.tagline} —{" "}
+            {brand.tagline} ·{" "}
             <Link href="/shop" className="font-semibold underline underline-offset-2 hover:text-gold transition-colors">
               Shop Now
             </Link>
