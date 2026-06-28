@@ -357,23 +357,23 @@ export default async function HomePage() {
       </section>
 
       {/* ── Trust Strip ───────────────────────────────────────────────────── */}
-      <section className="py-16 bg-green" aria-label="Why our oil">
+      <section className="py-16 bg-sand" aria-label="Why our oil">
         <Container>
           <FadeIn>
             <div className="text-center mb-10">
-              <span className="text-eyebrow text-gold/80 mb-2 block">The Uggalla Difference</span>
-              <h2 className="font-display text-4xl text-white">Why our oil</h2>
+              <span className="text-eyebrow mb-2 block">The Uggalla Difference</span>
+              <h2 className="font-display text-4xl text-green-deep">Why our oil</h2>
             </div>
           </FadeIn>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {trustPoints.map((point, i) => (
               <FadeIn key={point.title} delay={i * 0.1}>
                 <div className="text-center space-y-3">
-                  <div className="mx-auto w-14 h-14 rounded-full bg-gold/20 flex items-center justify-center">
-                    <point.icon className="h-6 w-6 text-gold" aria-hidden="true" />
+                  <div className="mx-auto w-14 h-14 rounded-full bg-cream border border-gold/30 flex items-center justify-center">
+                    <point.icon className="h-6 w-6 text-green" aria-hidden="true" />
                   </div>
-                  <h3 className="font-semibold text-white">{point.title}</h3>
-                  <p className="text-white/60 text-sm leading-relaxed">{point.description}</p>
+                  <h3 className="font-semibold text-green-deep">{point.title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{point.description}</p>
                 </div>
               </FadeIn>
             ))}
