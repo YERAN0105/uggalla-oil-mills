@@ -26,6 +26,8 @@ import { getProducts, getBrands } from "@/lib/products";
 import { getHeroBanners } from "@/lib/banners";
 import { HeroCarousel, type HeroSlide } from "@/components/storefront/HeroCarousel";
 import { LogoMarquee, type MarqueeLogo } from "@/components/storefront/LogoMarquee";
+import { ImageCardStack } from "@/components/storefront/ImageCardStack";
+import { getAboutStackImages } from "@/lib/about-stack";
 import { brand } from "@/lib/brand";
 
 const trustPoints = [
@@ -195,6 +197,19 @@ export default async function HomePage() {
     </div>
   );
 
+  // Optional photo card-stack for the About section — auto-loaded from
+  // `public/about-stack/` (filename = order + caption). Falls back to the single
+  // store photo when the folder is empty. Rendered twice to reuse the two-slot
+  // responsive pattern below: vertical on desktop, horizontal on phones. Only one
+  // is ever visible (the other is display:none and its autoplay stays idle).
+  const aboutImages = getAboutStackImages();
+  const aboutMedia = (orientation: "vertical" | "horizontal") =>
+    aboutImages.length > 0 ? (
+      <ImageCardStack images={aboutImages} orientation={orientation} />
+    ) : (
+      storeImage
+    );
+
   return (
     <>
       <JsonLd data={websiteLd} />
@@ -213,7 +228,7 @@ export default async function HomePage() {
             {/* Desktop: image in the left column. Hidden on mobile, where it
                 appears under the heading instead. */}
             <FadeIn direction="right" className="hidden lg:block">
-              {storeImage}
+              {aboutMedia("vertical")}
             </FadeIn>
 
             <FadeIn direction="left">
@@ -224,7 +239,7 @@ export default async function HomePage() {
                   <span className="text-green italic">from Padukka</span>
                 </h2>
                 {/* Mobile: image sits right under the heading. */}
-                <div className="lg:hidden">{storeImage}</div>
+                <div className="lg:hidden">{aboutMedia("horizontal")}</div>
                 <div className="space-y-4 text-body">
                   <p>
                     From the heart of Padukka, we bring Sri Lankan homes pure, natural oils,

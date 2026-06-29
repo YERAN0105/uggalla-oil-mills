@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "5mb",
     },
   },
+  // Bundle the About card-stack photos so the server-side folder read
+  // (lib/about-stack.ts) also works in production on Vercel, not just locally.
+  outputFileTracingIncludes: {
+    "/": ["./public/about-stack/**/*"],
+    "/about": ["./public/about-stack/**/*"],
+  },
   images: {
     remotePatterns: [
       {
