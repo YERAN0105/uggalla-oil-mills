@@ -3,6 +3,8 @@ import Image from "next/image";
 import { Container } from "@/components/shared/Container";
 import { FadeIn } from "@/components/shared/FadeIn";
 import { brand } from "@/lib/brand";
+import { getAboutStackImages } from "@/lib/about-stack";
+import { ImageCardStack } from "@/components/storefront/ImageCardStack";
 
 export const metadata: Metadata = {
   title: "About Us",
@@ -10,6 +12,8 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
+  // Auto-loaded from `public/about-stack/`; the section hides itself when empty.
+  const aboutImages = getAboutStackImages();
   return (
     <>
       {/* Hero */}
@@ -65,6 +69,31 @@ export default function AboutPage() {
           </FadeIn>
         </Container>
       </section>
+
+      {/* Photo card-stack — only renders when photos exist in public/about-stack/.
+          Vertical on desktop, horizontal on phones (mirrors the homepage). */}
+      {aboutImages.length > 0 && (
+        <section className="py-16 bg-sand" aria-label="Inside our shop">
+          <Container>
+            <FadeIn>
+              <div className="text-center mb-10">
+                <span className="text-eyebrow mb-2 block">Inside Our Shop</span>
+                <h2 className="font-display text-3xl text-green-deep">A look around</h2>
+              </div>
+            </FadeIn>
+            <FadeIn delay={0.1}>
+              <div className="mx-auto max-w-md">
+                <div className="hidden lg:block">
+                  <ImageCardStack images={aboutImages} orientation="vertical" />
+                </div>
+                <div className="lg:hidden">
+                  <ImageCardStack images={aboutImages} orientation="horizontal" />
+                </div>
+              </div>
+            </FadeIn>
+          </Container>
+        </section>
+      )}
     </>
   );
 }
