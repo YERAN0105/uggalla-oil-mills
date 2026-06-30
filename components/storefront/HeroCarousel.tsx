@@ -62,7 +62,7 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
           const alt = s.headline ?? "Uggalla Oil Mills shop in Padukka, Sri Lanka";
           const base = cn(
             "object-cover object-center transition-opacity duration-700",
-            i === active ? "opacity-40" : "opacity-0"
+            i === active ? "opacity-100" : "opacity-0"
           );
           return (
             <Fragment key={i}>
@@ -98,7 +98,10 @@ export function HeroCarousel({ slides }: { slides: HeroSlide[] }) {
             </Fragment>
           );
         })}
-        <div className="absolute inset-0 bg-gradient-to-r from-green-deep/90 via-green-deep/60 to-transparent" />
+        {/* Readability gradient — neutral dark (no green), strongest on the left
+            where the headline sits. Mirrors the category/brand hero treatment. */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/15" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
       </div>
 
       <Container className="relative z-10 py-24">

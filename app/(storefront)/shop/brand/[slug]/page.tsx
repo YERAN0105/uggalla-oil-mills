@@ -102,16 +102,22 @@ export default async function BrandPage({ params, searchParams }: BrandPageProps
     <div className="min-h-screen bg-cream">
       <JsonLd data={breadcrumbLd} />
       {/* Brand hero */}
-      <div className="relative bg-green-deep text-white overflow-hidden">
+      <div className="relative bg-green-deep text-white overflow-hidden flex items-center min-h-[220px] sm:min-h-[300px]">
         {brandRow.image_url && (
-          <Image
-            src={brandRow.image_url}
-            alt={brandRow.name}
-            fill
-            className="object-cover opacity-20"
-            sizes="100vw"
-            priority
-          />
+          <>
+            <Image
+              src={brandRow.image_url}
+              alt={brandRow.name}
+              fill
+              className="object-cover object-center"
+              sizes="100vw"
+              priority
+            />
+            {/* Readability gradient — dark where the text sits, fading clear.
+               Neutral (no green) so the banner reads as the photo, not a tint. */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/45 to-black/15" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+          </>
         )}
         <Container className="relative py-12 sm:py-16">
           <nav aria-label="Breadcrumb" className="mb-4">
