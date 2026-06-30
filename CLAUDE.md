@@ -76,6 +76,14 @@ The homepage hero (`HeroCarousel`) takes an **optional per-slide mobile (portrai
 
 Two image sources feed it (`app/(storefront)/page.tsx`): admin **banners** (`banners.mobile_image_url`, migration 015; uploaded via the "Mobile image" field in `BannersManager`) and the **built-in default** hero — a tall `public/hero-mobile.jpeg` is auto-detected via an `fs.existsSync` check at module load (drop the file in, no code change; absent → wide `hero.jpeg` everywhere). A banner with no mobile crop falls back to its **own** wide image, never the default's mobile crop. **Gotcha:** `mobile_image_url` is a referenced storage column — it's tracked in the orphan **storage sweep** keep-list and in banner delete/replace cleanup (`lib/admin/banners.ts`), so don't add new image columns without wiring both. Recommended upload dimensions for every image type live in `docs/IMAGE_SIZES.md`.
 
+## About Photo Card-Stack
+
+The "About Us" photo deck (`components/storefront/ImageCardStack.tsx`), shown on the homepage About section and the `/about` page, is a **magic folder**: drop images in `public/about-stack/` and they appear automatically — no code change. `lib/about-stack.ts` (server-only) reads the folder, sorts by filename (numeric prefix = display order), and derives each image's **alt text** from the name; an **empty/missing folder falls back to the single store photo**, so it's always safe. On-image text labels are off by default (`showCaptions`). Three things are non-obvious:
+
+- **Responsive orientation, rendered twice.** The deck stacks **vertically on desktop, horizontally on phones** (so a sideways swipe never fights vertical page scroll), and is kept **centred** — neighbours peek on *both* sides of the front card. It's rendered **twice** (one orientation each) reusing the same `hidden lg:block` / `lg:hidden` two-slot pattern as the hero/`storeImage`; only one is ever visible, and autoplay is gated by an `IntersectionObserver` so the hidden (and any off-screen) instance stays idle.
+- **Swipe is native pointer events, NOT Framer drag.** `MotionProvider` loads the lighter `domAnimation` bundle, which **excludes drag/pan/layout** — `<m.div drag>` silently does nothing. This component detects swipe/tap from raw `onPointer*` events instead; do the same (or switch to `domMax`) for any future drag UI.
+- **Gotcha — Vercel file tracing.** The folder is read on the *server*, so `next.config.ts` (`outputFileTracingIncludes`) bundles `public/about-stack/**` into the `/` and `/about` route outputs. A directory read isn't traced automatically and would return empty in production otherwise — wire any new server-read `public/` folder there too.
+
 ## Catalog Routing & Filters
 
 A category can be viewed two ways, and they are intentionally different:
@@ -194,7 +202,7 @@ Phases 1–6 are built; **only deployment remains** (PayHere/WhatsApp keys, the 
 - `components/shared/` — layout helpers used across both storefront and admin (BrandLogo, Container, FadeIn, DropletSVG)
 - `components/storefront/` — storefront-specific (Header, Footer, WhatsAppButton); `components/account/` — account-area UI (nav, order/subscription/review/address/wishlist managers, shared `primitives.tsx`); `components/admin/` — admin UI, grouped per domain (see "Admin Panel" above)
 - `stores/` — Zustand client-side stores: `cart.ts` (`uggalla-cart`) and `wishlistStore.ts` (`uggalla-wishlist`), both `localStorage`-persisted.
-- The `FadeIn` component (`components/shared/FadeIn.tsx`) wraps Framer Motion and respects `prefers-reduced-motion` globally via CSS in `globals.css`.
+- The `FadeIn` component (`components/shared/FadeIn.tsx`) wraps Framer Motion and respects `prefers-reduced-motion` globally via CSS in `globals.css`. Motion uses `LazyMotion` with the **`domAnimation`** feature set (`MotionProvider`) and the `m` component (not `motion`) — this bundle **excludes drag/pan/layout animations**, so use native pointer events or switch to `domMax` for those (see "About Photo Card-Stack").
 - The Google OAuth button is conditionally rendered based on `isGoogleAuthEnabled` — the login page always works with email/password even when Google is not configured.
 - `globals.css` applies a global brand-green `:focus-visible` ring to **every** focusable element. To suppress it on a specific element (e.g. a text input styled as a borderless pill), add `focus-visible:ring-0 focus-visible:ring-offset-0` — don't remove the global rule.
 

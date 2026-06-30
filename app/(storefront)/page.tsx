@@ -312,9 +312,6 @@ export default async function HomePage() {
                       {/* Base scrim — light, so the photo stays prominent by
                           default while keeping the bottom label legible. */}
                       <div className="absolute inset-0 bg-gradient-to-t from-green-deep/65 via-green-deep/10 to-transparent" />
-                      {/* Hover scrim — the darker treatment fades in on hover for
-                          an interactive emphasis (paired with the image zoom). */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-green-deep via-green-deep/55 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                       {b.isBulk && (
                         <div className="absolute top-3 right-3">
                           <Badge variant="gold">Get a Quote</Badge>
