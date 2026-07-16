@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeSearchTerm } from "@/lib/utils";
 import { getAdminUser } from "./guard";
 
 export interface AdminSearchResult {
@@ -19,7 +20,7 @@ export async function adminGlobalSearch(query: string): Promise<AdminSearchResul
   const admin = await getAdminUser();
   if (!admin) return [];
 
-  const q = query.trim();
+  const q = sanitizeSearchTerm(query);
   if (q.length < 2) return [];
 
   const db = createAdminClient();

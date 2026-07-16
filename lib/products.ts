@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSearchTerm } from "@/lib/utils";
 import type { ProductWithRelations, Brand, Category } from "@/types/supabase";
 
 export type SortOption = "newest" | "price_asc" | "price_desc" | "popularity";
@@ -132,9 +133,10 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
   if (filters.bestseller) query = query.eq("is_bestseller", true);
   if (filters.purchaseType) query = query.eq("purchase_type", filters.purchaseType);
   if (filters.query) {
-    query = query.or(
-      `name.ilike.%${filters.query}%,short_description.ilike.%${filters.query}%`
-    );
+    const term = sanitizeSearchTerm(filters.query);
+    if (term) {
+      query = query.or(`name.ilike.%${term}%,short_description.ilike.%${term}%`);
+    }
   }
 
   switch (filters.sort) {
@@ -228,12 +230,13 @@ export async function searchProducts(
   query: string,
   limit = 5
 ): Promise<ProductWithRelations[]> {
-  if (!query.trim()) return [];
+  const term = sanitizeSearchTerm(query);
+  if (!term) return [];
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_SELECT)
-    .or(`name.ilike.%${query}%,short_description.ilike.%${query}%`)
+    .or(`name.ilike.%${term}%,short_description.ilike.%${term}%`)
     .eq("is_published", true)
     .is("deleted_at", null)
     .order("is_featured", { ascending: false })

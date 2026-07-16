@@ -94,20 +94,43 @@ export async function saveProduct(input: unknown, id?: string): Promise<ActionRe
 
   if (!productId) return { ok: false, error: "Could not save product." };
 
-  // Replace sizes (retail). The base_price trigger keeps base_price in sync.
-  await db.from("product_sizes").delete().eq("product_id", productId);
-  if (d.purchase_type === "retail" && d.sizes.length > 0) {
-    const sizeRows = d.sizes.map((s, i) => ({
-      product_id: productId,
-      label: s.label,
-      volume_ml: s.volume_ml ?? null,
-      price: s.price,
-      compare_at_price: s.compare_at_price ?? null,
-      display_order: i,
-    }));
-    const { error: sizeErr } = await db.from("product_sizes").insert(sizeRows);
-    if (sizeErr) return { ok: false, error: sizeErr.message };
+  // Sync sizes (retail) by DIFF, not delete-and-reinsert: size ids are
+  // referenced by subscriptions (size_id, ON DELETE SET NULL) and by saved
+  // carts, so rows the form kept must keep their identity. The base_price
+  // trigger keeps base_price in sync.
+  if (d.purchase_type === "retail") {
+    const { data: existingSizes } = await db
+      .from("product_sizes")
+      .select("id")
+      .eq("product_id", productId);
+    const existingIds = new Set(
+      ((existingSizes as { id: string }[]) ?? []).map((r) => r.id)
+    );
+    const keptIds = new Set(
+      d.sizes.map((s) => s.id).filter((sid): sid is string => !!sid && existingIds.has(sid))
+    );
+    const removedIds = [...existingIds].filter((sid) => !keptIds.has(sid));
+    if (removedIds.length > 0) {
+      const { error: delErr } = await db.from("product_sizes").delete().in("id", removedIds);
+      if (delErr) return { ok: false, error: delErr.message };
+    }
+    for (let i = 0; i < d.sizes.length; i++) {
+      const s = d.sizes[i];
+      const row = {
+        label: s.label,
+        volume_ml: s.volume_ml ?? null,
+        price: s.price,
+        compare_at_price: s.compare_at_price ?? null,
+        display_order: i,
+      };
+      const sizeErr = keptIds.has(s.id ?? "")
+        ? (await db.from("product_sizes").update(row).eq("id", s.id!)).error
+        : (await db.from("product_sizes").insert({ ...row, product_id: productId })).error;
+      if (sizeErr) return { ok: false, error: sizeErr.message };
+    }
   } else if (d.purchase_type === "bulk_quote") {
+    // Switching to bulk drops any sizes (bulk products have none).
+    await db.from("product_sizes").delete().eq("product_id", productId);
     // Bulk: no sizes; base_price is the indicative price (trigger won't fire).
     await db.from("products").update({ base_price: d.base_price }).eq("id", productId);
   }
@@ -234,6 +257,24 @@ export async function bulkProductAction(
       if (res.ok) count += 1;
     }
     return { ok: true, data: { count } };
+  }
+
+  // Same rule as toggleProductPublished: a retail product needs ≥1 size before
+  // it can be published (else it would list at Rs. 0). Refuse the whole batch
+  // and name the offenders rather than silently publishing a subset.
+  if (action === "publish") {
+    const { data: retail } = await db
+      .from("products")
+      .select("id, name, product_sizes(id)")
+      .in("id", ids)
+      .eq("purchase_type", "retail");
+    const missing = ((retail as any[]) ?? []).filter((p) => (p.product_sizes ?? []).length === 0);
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        error: `Add at least one size before publishing: ${missing.map((p) => p.name).join(", ")}`,
+      };
+    }
   }
 
   const update =

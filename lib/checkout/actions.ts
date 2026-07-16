@@ -119,8 +119,6 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
     lineTotal: number;
     snapshot: { name: string; brand: string | null; slug: string; image: string | null };
     size: { id: string | null; label: string; volume_ml: number | null; price: number };
-    stockTracked: boolean;
-    stockQuantity: number;
   }
 
   const resolved: ResolvedLine[] = [];
@@ -140,16 +138,6 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
       size = { id: match.id, label: match.label, volume_ml: match.volume_ml, price: Number(match.price) };
     } else {
       size = { id: null, label: "Standard", volume_ml: null, price: Number(p.base_price) };
-    }
-
-    if (p.stock_tracked && p.stock_quantity < item.quantity) {
-      return {
-        ok: false,
-        error:
-          p.stock_quantity <= 0
-            ? `"${p.name}" is out of stock. Please remove it from your cart.`
-            : `Only ${p.stock_quantity} of "${p.name}" left. Please reduce the quantity.`,
-      };
     }
 
     const unitPrice = size.price;
@@ -173,9 +161,27 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
       lineTotal,
       snapshot: { name: p.name, brand: p.brands?.name ?? null, slug: p.slug, image: primary?.url ?? null },
       size,
-      stockTracked: p.stock_tracked,
-      stockQuantity: p.stock_quantity,
     });
+  }
+
+  // Stock is tracked per PRODUCT, but the same product can appear on several
+  // cart lines (one per size) — so check availability against the SUM of its
+  // lines, not each line in isolation.
+  const qtyByProduct = new Map<string, number>();
+  for (const l of resolved) {
+    qtyByProduct.set(l.productId, (qtyByProduct.get(l.productId) ?? 0) + l.quantity);
+  }
+  for (const [productId, totalQty] of qtyByProduct) {
+    const p = productMap.get(productId);
+    if (p?.stock_tracked && p.stock_quantity < totalQty) {
+      return {
+        ok: false,
+        error:
+          p.stock_quantity <= 0
+            ? `"${p.name}" is out of stock. Please remove it from your cart.`
+            : `Only ${p.stock_quantity} of "${p.name}" left. Please reduce the quantity.`,
+      };
+    }
   }
 
   const subtotal = Number(resolved.reduce((s, l) => s + l.lineTotal, 0).toFixed(2));
@@ -480,11 +486,13 @@ export async function createOrder(input: unknown): Promise<CreateOrderResult> {
     });
   }
 
-  // 17. Decrement tracked stock.
-  for (const l of resolved) {
-    if (l.stockTracked) {
-      const newQty = Math.max(0, l.stockQuantity - l.quantity);
-      await admin.from("products").update({ stock_quantity: newQty }).eq("id", l.productId);
+  // 17. Decrement tracked stock — once per product, by the summed quantity of
+  // all its lines (per-line updates from the same snapshot would under-count).
+  for (const [productId, totalQty] of qtyByProduct) {
+    const p = productMap.get(productId);
+    if (p?.stock_tracked) {
+      const newQty = Math.max(0, p.stock_quantity - totalQty);
+      await admin.from("products").update({ stock_quantity: newQty }).eq("id", productId);
     }
   }
 

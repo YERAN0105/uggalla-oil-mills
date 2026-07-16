@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeSearchTerm } from "@/lib/utils";
 import type { AdminCustomerRow } from "@/types/admin";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -55,8 +56,11 @@ export async function listCustomers(params: CustomerListParams): Promise<AdminCu
     .limit(500);
 
   if (params.search) {
-    const like = `%${params.search}%`;
-    query = query.or(`name.ilike.${like},phone.ilike.${like}`);
+    const term = sanitizeSearchTerm(params.search);
+    if (term) {
+      const like = `%${term}%`;
+      query = query.or(`name.ilike.${like},phone.ilike.${like}`);
+    }
   }
   if (params.blocked === "1") query = query.eq("blocked", true);
   if (params.blocked === "0") query = query.eq("blocked", false);
