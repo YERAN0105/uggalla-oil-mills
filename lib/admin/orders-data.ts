@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeSearchTerm } from "@/lib/utils";
 import type { AddressSnapshot, OrderItemRow } from "@/types/checkout";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -131,10 +132,13 @@ export async function listOrders(
   if (params.dateFrom) query = query.gte("created_at", params.dateFrom);
   if (params.dateTo) query = query.lte("created_at", `${params.dateTo}T23:59:59`);
   if (params.search) {
-    const like = `%${params.search}%`;
-    query = query.or(
-      `order_number.ilike.${like},guest_email.ilike.${like},guest_phone.ilike.${like}`
-    );
+    const term = sanitizeSearchTerm(params.search);
+    if (term) {
+      const like = `%${term}%`;
+      query = query.or(
+        `order_number.ilike.${like},guest_email.ilike.${like},guest_phone.ilike.${like}`
+      );
+    }
   }
 
   if (params.sort === "total") query = query.order("total", { ascending: false });

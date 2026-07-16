@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sanitizeSearchTerm } from "@/lib/utils";
 import type { AddressSnapshot } from "@/types/checkout";
 import type { BulkRequestItem } from "@/types/supabase";
 import { normalizeBulkItems, shortBulkItemsLabel } from "@/lib/bulk/items";
@@ -69,8 +70,11 @@ export async function listBulkRequests(params: BulkListParams): Promise<BulkRequ
   if (params.dateFrom) query = query.gte("created_at", params.dateFrom);
   if (params.dateTo) query = query.lte("created_at", `${params.dateTo}T23:59:59`);
   if (params.search) {
-    const like = `%${params.search}%`;
-    query = query.or(`name.ilike.${like},phone.ilike.${like}`);
+    const term = sanitizeSearchTerm(params.search);
+    if (term) {
+      const like = `%${term}%`;
+      query = query.or(`name.ilike.${like},phone.ilike.${like}`);
+    }
   }
 
   const { data } = await query;

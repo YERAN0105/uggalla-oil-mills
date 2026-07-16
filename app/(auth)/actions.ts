@@ -54,7 +54,13 @@ export async function signIn(formData: FormData) {
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const redirectTo = (formData.get("redirect") as string) || "/";
+  // Only same-site relative paths — an absolute URL (or protocol-relative
+  // "//evil.com") here would be an open redirect for phishing.
+  const rawRedirect = (formData.get("redirect") as string) || "/";
+  const redirectTo =
+    rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") && !rawRedirect.includes("\\")
+      ? rawRedirect
+      : "/";
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 

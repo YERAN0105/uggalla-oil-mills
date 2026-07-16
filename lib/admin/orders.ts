@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/admin/guard";
 import { logActivity } from "@/lib/admin/activity";
 import { earnLoyaltyForOrder, reverseLoyaltyForOrder } from "@/lib/loyalty/engine";
 import { enqueueOrderNotification, enqueueReceiptNotification } from "@/lib/notifications/pending";
+import { sanitizeSearchTerm } from "@/lib/utils";
 import type { ActionResult } from "@/types/admin";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -21,11 +22,63 @@ const VALID_STATUSES = [
   "refunded",
 ];
 
+const TERMINAL_STATUSES = ["cancelled", "refunded"];
+
 function revalidateOrders(orderNumber?: string) {
   revalidatePath("/admin/orders");
   revalidatePath("/admin");
   revalidatePath("/admin/payments/pending");
   if (orderNumber) revalidatePath(`/admin/orders/${orderNumber}`);
+}
+
+/**
+ * Undo everything a cancelled order reserved: restore tracked stock, free the
+ * coupon usage, reverse loyalty (refund redeemed points, claw back earned), and
+ * cancel subscriptions created from the order. Shared by cancelOrderAdmin and
+ * the status-editor path in updateOrderStatus so both cancel routes behave the
+ * same. Each step is idempotent except the stock restore — callers must only
+ * invoke this when the order is leaving a non-terminal status.
+ */
+async function reverseOrderResources(
+  db: ReturnType<typeof createAdminClient>,
+  orderId: string
+): Promise<void> {
+  // Restore tracked stock.
+  const { data: items } = await db
+    .from("order_items")
+    .select("product_id, quantity")
+    .eq("order_id", orderId);
+  const stockRestore = new Map<string, number>();
+  for (const it of (items as any[]) ?? []) {
+    if (!it.product_id) continue;
+    stockRestore.set(it.product_id, (stockRestore.get(it.product_id) ?? 0) + Number(it.quantity));
+  }
+  for (const [productId, qty] of stockRestore) {
+    const { data: p } = await db
+      .from("products")
+      .select("stock_tracked, stock_quantity")
+      .eq("id", productId)
+      .maybeSingle();
+    if (p && (p as any).stock_tracked) {
+      await db
+        .from("products")
+        .update({ stock_quantity: Number((p as any).stock_quantity) + qty })
+        .eq("id", productId);
+    }
+  }
+
+  // Free the coupon usage so the coupon can be reused.
+  await db.from("coupon_usage").delete().eq("order_id", orderId);
+
+  // Reverse loyalty (refund redeemed points; claw back any earned).
+  await reverseLoyaltyForOrder(orderId);
+
+  // Cancel subscriptions created from this order.
+  await db
+    .from("subscriptions")
+    .update({ status: "cancelled" })
+    .eq("created_from_order_id", orderId)
+    .neq("status", "cancelled");
 }
 
 /**
@@ -84,8 +137,16 @@ export async function updateOrderStatus(
     // No-op for normal orders (none reference them via converted_order_id).
     await db.from("bulk_requests").update({ status: "completed" }).eq("converted_order_id", orderId);
   }
-  // Reverse loyalty if a previously-delivered order is cancelled/refunded.
-  if ((status === "cancelled" || status === "refunded") && prevStatus === "delivered") {
+  // Cancelling via the status editor must undo the same things the dedicated
+  // cancel action does (stock, coupon, loyalty, subscriptions) — but only when
+  // leaving a non-terminal status, so a cancelled→refunded relabel (or the
+  // reverse) never restores stock twice.
+  if (status === "cancelled" && !TERMINAL_STATUSES.includes(prevStatus)) {
+    await reverseOrderResources(db, orderId);
+  }
+  // A refund keeps the goods with the customer — no stock restore — but the
+  // loyalty effects are reversed (idempotent), matching refundOrder.
+  if (status === "refunded" && !TERMINAL_STATUSES.includes(prevStatus)) {
     await reverseLoyaltyForOrder(orderId);
   }
 
@@ -195,27 +256,13 @@ export async function cancelOrderAdmin(orderId: string, reason: string): Promise
   if (!order) return { ok: false, error: "Order not found." };
   if ((order as any).status === "cancelled") return { ok: false, error: "Already cancelled." };
 
-  // Restore tracked stock.
-  const { data: items } = await db
-    .from("order_items")
-    .select("product_id, quantity")
-    .eq("order_id", orderId);
-  for (const it of (items as any[]) ?? []) {
-    if (!it.product_id) continue;
-    const { data: p } = await db
-      .from("products")
-      .select("stock_tracked, stock_quantity")
-      .eq("id", it.product_id)
-      .maybeSingle();
-    if (p && (p as any).stock_tracked) {
-      await db
-        .from("products")
-        .update({ stock_quantity: Number((p as any).stock_quantity) + Number(it.quantity) })
-        .eq("id", it.product_id);
-    }
+  // Undo stock / coupon / loyalty / subscriptions — but not when the order is
+  // already refunded (a refund keeps the goods, so there's no stock to restore,
+  // and its loyalty was already reversed).
+  if (!TERMINAL_STATUSES.includes((order as any).status)) {
+    await reverseOrderResources(db, orderId);
   }
 
-  const wasDelivered = (order as any).status === "delivered";
   const update: Record<string, unknown> = { status: "cancelled" };
   if ((order as any).payment_status === "paid") update.payment_status = "refunded";
 
@@ -228,13 +275,6 @@ export async function cancelOrderAdmin(orderId: string, reason: string): Promise
     note: `Cancelled by admin: ${reason}`,
     changed_by: admin.id,
   });
-
-  // Reverse loyalty: refund redeemed points always; claw back earned if delivered.
-  await reverseLoyaltyForOrder(orderId);
-  void wasDelivered;
-
-  // Remove coupon usage so the coupon can be reused.
-  await db.from("coupon_usage").delete().eq("order_id", orderId);
 
   // Buffer the cancellation notification (terminal — notified once).
   await enqueueOrderNotification(orderId, "cancelled");
@@ -369,8 +409,11 @@ export async function exportOrdersCsv(filters: {
   if (filters.dateFrom) query = query.gte("created_at", filters.dateFrom);
   if (filters.dateTo) query = query.lte("created_at", `${filters.dateTo}T23:59:59`);
   if (filters.search) {
-    const like = `%${filters.search}%`;
-    query = query.or(`order_number.ilike.${like},guest_email.ilike.${like},guest_phone.ilike.${like}`);
+    const term = sanitizeSearchTerm(filters.search);
+    if (term) {
+      const like = `%${term}%`;
+      query = query.or(`order_number.ilike.${like},guest_email.ilike.${like},guest_phone.ilike.${like}`);
+    }
   }
 
   const { data, error } = await query;
