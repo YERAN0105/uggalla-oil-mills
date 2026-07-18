@@ -9,6 +9,7 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPayHereEnabled } from "@/lib/integrations";
 import { brand, formatCurrency } from "@/lib/brand";
+import { getShopInfo } from "@/lib/settings";
 import { formatShortDate } from "@/lib/date";
 import { signOrderToken } from "@/lib/orders/token";
 import { normalizeBulkItems } from "@/lib/bulk/items";
@@ -34,6 +35,7 @@ function Shell({ title, children }: { title: string; children: React.ReactNode }
 
 export default async function QuotePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  const shopInfo = await getShopInfo();
 
   if (!isPayHereEnabled) {
     return (
@@ -42,7 +44,7 @@ export default async function QuotePage({ params }: { params: Promise<{ token: s
           Online payment isn’t enabled for this quote. Please get in touch and we’ll arrange payment
           and delivery directly.
         </p>
-        <p className="mt-4 text-sm text-muted-foreground">{brand.email} · {brand.phone}</p>
+        <p className="mt-4 text-sm text-muted-foreground">{shopInfo.email} · {shopInfo.phone}</p>
       </Shell>
     );
   }
@@ -100,7 +102,7 @@ export default async function QuotePage({ params }: { params: Promise<{ token: s
     return (
       <Shell title="Quote unavailable">
         <p className="mt-2 text-muted-foreground">This quote is no longer available. Please contact us for a new one.</p>
-        <p className="mt-4 text-sm text-muted-foreground">{brand.email} · {brand.phone}</p>
+        <p className="mt-4 text-sm text-muted-foreground">{shopInfo.email} · {shopInfo.phone}</p>
       </Shell>
     );
   }
@@ -120,7 +122,7 @@ export default async function QuotePage({ params }: { params: Promise<{ token: s
         <p className="mt-2 text-muted-foreground">
           For your security this payment link has expired. Please contact us and we’ll send a fresh quote.
         </p>
-        <p className="mt-4 text-sm text-muted-foreground">{brand.email} · {brand.phone}</p>
+        <p className="mt-4 text-sm text-muted-foreground">{shopInfo.email} · {shopInfo.phone}</p>
       </Shell>
     );
   }

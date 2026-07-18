@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import { Container } from "@/components/shared/Container";
 import { FadeIn } from "@/components/shared/FadeIn";
 import { brand } from "@/lib/brand";
+import { getShopInfo } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
   description: `Terms and conditions for ${brand.name}.`,
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const shopInfo = await getShopInfo();
   return (
     <>
       <section className="py-16 bg-green-deep text-white">
@@ -77,8 +79,8 @@ export default function TermsPage() {
               <h2 className="font-display text-2xl text-green-deep">7. Contact</h2>
               <p>
                 For questions about these terms, please contact us at{" "}
-                <a href={`mailto:${brand.email}`} className="text-green hover:underline">
-                  {brand.email}
+                <a href={`mailto:${shopInfo.email}`} className="text-green hover:underline">
+                  {shopInfo.email}
                 </a>
                 .
               </p>

@@ -11,7 +11,7 @@
 import { createElement } from "react";
 import { brand, formatCurrency } from "@/lib/brand";
 import { isResendEnabled, isWhatsAppEnabled } from "@/lib/integrations";
-import { getSetting } from "@/lib/settings";
+import { getSetting, getShopInfo } from "@/lib/settings";
 import { NotificationEmail, type NotificationEmailProps } from "@/emails/NotificationEmail";
 import { sendEmail } from "./email";
 import { sendWhatsAppTemplate } from "./whatsapp";
@@ -113,7 +113,11 @@ async function dispatch(
   return results;
 }
 
-const FOOT = { shopEmail: brand.email, shopPhone: brand.phone };
+/** Email footer contact block, sourced from the admin-editable Shop Info settings. */
+async function shopFooter(): Promise<{ shopEmail: string; shopPhone: string }> {
+  const s = await getShopInfo();
+  return { shopEmail: s.email, shopPhone: s.phone };
+}
 
 // ─── welcome (signup) ─────────────────────────────────────────────────────────
 
@@ -122,6 +126,7 @@ export async function sendWelcome(input: {
   email: string | null;
   phone: string | null;
 }): Promise<void> {
+  const FOOT = await shopFooter();
   const heading = "Welcome to " + brand.name;
   const paragraphs = [
     "Thank you for joining us. We bring you pure, natural oils from Padukka, delivered island-wide.",
@@ -155,6 +160,7 @@ export async function sendBulkRequestReceived(input: {
   items: BulkRequestItem[];
   requestId: string;
 }): Promise<void> {
+  const FOOT = await shopFooter();
   const summary = summarizeBulkItems(input.items);
   // One labelled row per product, so the customer/admin see the full mixed order.
   const itemRows = input.items.map((it) => ({
@@ -187,11 +193,11 @@ export async function sendBulkRequestReceived(input: {
   );
 
   // Admin alert (email only) — let the shop know a request is waiting.
-  if (brand.email) {
+  if (FOOT.shopEmail) {
     await dispatch(
       "bulk_request_admin_alert",
       {
-        to: brand.email,
+        to: FOOT.shopEmail,
         subject: `New bulk quote request — ${summary}`,
         text: `New bulk request from ${input.name ?? "a customer"} (${input.email ?? "no email"}, ${input.phone ?? "no phone"}).\nProducts: ${summary}\n\nReview: ${APP_URL}/admin/bulk-requests/${input.requestId}`,
         props: {
@@ -223,6 +229,7 @@ export async function sendBulkQuoteSent(input: {
   /** Pay-online link — only present for online quotes (PayHere). */
   payLink: string | null;
 }): Promise<void> {
+  const FOOT = await shopFooter();
   const summary = summarizeBulkItems(input.items);
   const total = formatCurrency(input.quotedTotal);
   // For WhatsApp's fixed-parameter template: {{2}} product / {{3}} quantity stay
@@ -305,6 +312,7 @@ export async function sendSubscriptionReminder(input: {
   productName: string;
   reorderUrl: string;
 }): Promise<void> {
+  const FOOT = await shopFooter();
   const paragraphs = [
     `Running low on ${input.productName}? It might be time to reorder.`,
     "Tap the button below and we'll pre-fill your cart with the same product and size — checkout takes seconds.",
@@ -342,6 +350,7 @@ export async function sendReviewRequest(input: {
   orderNumber: string;
   reviewUrl: string;
 }): Promise<void> {
+  const FOOT = await shopFooter();
   const paragraphs = [
     `We hope you're enjoying your recent order (${input.orderNumber}).`,
     "Would you take a moment to share what you think? Your review helps other customers and means a lot to our small shop.",

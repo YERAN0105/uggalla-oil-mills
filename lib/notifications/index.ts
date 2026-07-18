@@ -14,7 +14,7 @@
 import { createElement } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { brand, formatCurrency } from "@/lib/brand";
-import { getSetting } from "@/lib/settings";
+import { getSetting, getShopInfo } from "@/lib/settings";
 import type { OrderStatus } from "@/lib/orders/status";
 import type { NotificationSettings } from "@/types/admin";
 import { OrderStatusEmail, type OrderEmailItem } from "@/emails/OrderStatusEmail";
@@ -265,6 +265,9 @@ export async function notify(
   const emailAllowed = settings.email_enabled !== false && eventAllowed;
   const whatsappAllowed = settings.whatsapp_enabled !== false && eventAllowed;
 
+  // Footer contact block, sourced from the admin-editable Shop Info settings.
+  const shopInfo = await getShopInfo();
+
   const tasks: Promise<NotifyChannelResult>[] = [];
 
   // Email — branded React Email template.
@@ -289,8 +292,8 @@ export async function notify(
         fulfillmentType: payload.fulfillmentType,
         deliveryDate: payload.deliveryDate,
         viewOrderUrl: payload.viewOrderUrl,
-        shopEmail: brand.email,
-        shopPhone: brand.phone,
+        shopEmail: shopInfo.email,
+        shopPhone: shopInfo.phone,
       });
       const r = await sendEmail({ to: payload.email, subject, react, text });
       if (r.ok) return { channel: "email", status: "sent" };

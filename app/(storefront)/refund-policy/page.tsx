@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import { Container } from "@/components/shared/Container";
 import { FadeIn } from "@/components/shared/FadeIn";
 import { brand } from "@/lib/brand";
+import { getShopInfo } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Return & Refund Policy",
   description: `Return, refund, and cancellation policy for ${brand.name}.`,
 };
 
-export default function RefundPolicyPage() {
+export default async function RefundPolicyPage() {
+  const shopInfo = await getShopInfo();
   return (
     <>
       <section className="py-16 bg-green-deep text-white">
@@ -56,8 +58,8 @@ export default function RefundPolicyPage() {
               <h2 className="font-display text-2xl text-green-deep">3. How to Make a Claim</h2>
               <p>
                 Please contact us within <strong>48 hours</strong> of delivery at{" "}
-                <a href="mailto:uggallaoilmills@gmail.com" className="text-green hover:underline">
-                  uggallaoilmills@gmail.com
+                <a href={`mailto:${shopInfo.email}`} className="text-green hover:underline">
+                  {shopInfo.email}
                 </a>{" "}
                 or via WhatsApp, with your order number and a clear photo of the issue (for
                 damaged, defective, or incorrect items). Claims submitted with photo evidence
@@ -92,10 +94,10 @@ export default function RefundPolicyPage() {
               <h2 className="font-display text-2xl text-green-deep">7. Contact</h2>
               <p>
                 For any questions about returns, refunds, or cancellations, contact us at{" "}
-                <a href="mailto:uggallaoilmills@gmail.com" className="text-green hover:underline">
-                  uggallaoilmills@gmail.com
+                <a href={`mailto:${shopInfo.email}`} className="text-green hover:underline">
+                  {shopInfo.email}
                 </a>
-                . {brand.name}, {brand.address}.
+                . {brand.name}, {shopInfo.address}.
               </p>
             </div>
           </FadeIn>

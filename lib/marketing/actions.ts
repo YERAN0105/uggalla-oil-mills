@@ -3,6 +3,7 @@
 import { createElement } from "react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { brand } from "@/lib/brand";
+import { getShopInfo } from "@/lib/settings";
 import { isResendEnabled } from "@/lib/integrations";
 import { sendEmail } from "@/lib/notifications/email";
 import { NotificationEmail } from "@/emails/NotificationEmail";
@@ -30,6 +31,7 @@ export async function subscribeNewsletter(emailRaw: string): Promise<SimpleResul
   // Best-effort welcome — never fail the subscription if email is off / errors.
   if (isResendEnabled) {
     try {
+      const shopInfo = await getShopInfo();
       const react = createElement(NotificationEmail, {
         preview: `You're subscribed to ${brand.name}`,
         heading: "You're on the list",
@@ -37,8 +39,8 @@ export async function subscribeNewsletter(emailRaw: string): Promise<SimpleResul
           `Thanks for subscribing to ${brand.name}. You'll be the first to hear about new products, offers and seasonal specials.`,
         ],
         cta: { label: "Shop now", url: `${APP_URL}/shop` },
-        shopEmail: brand.email,
-        shopPhone: brand.phone,
+        shopEmail: shopInfo.email,
+        shopPhone: shopInfo.phone,
       });
       await sendEmail({
         to: email,
@@ -77,16 +79,17 @@ export async function submitContact(input: ContactInput): Promise<SimpleResult> 
   }
 
   try {
+    const shopInfo = await getShopInfo();
     const subject = input.subject?.trim() || "Website contact form";
     const react = createElement(NotificationEmail, {
       preview: `Contact form: ${subject}`,
       heading: "New contact message",
       paragraphs: [`From: ${name} (${email}${input.phone ? `, ${input.phone}` : ""})`, `Subject: ${subject}`, message],
-      shopEmail: brand.email,
-      shopPhone: brand.phone,
+      shopEmail: shopInfo.email,
+      shopPhone: shopInfo.phone,
     });
     const res = await sendEmail({
-      to: brand.email,
+      to: shopInfo.email,
       subject: `[Contact] ${subject}`,
       react,
       text: `From: ${name} (${email}${input.phone ? `, ${input.phone}` : ""})\nSubject: ${subject}\n\n${message}`,

@@ -4,6 +4,7 @@ import { FadeIn } from "@/components/shared/FadeIn";
 import { BulkRequestForm } from "./BulkRequestForm";
 import { getProducts } from "@/lib/products";
 import { getCheckoutUser } from "@/lib/checkout/data";
+import { getShopInfo } from "@/lib/settings";
 import { brand } from "@/lib/brand";
 import { Phone, Mail, MapPin } from "lucide-react";
 
@@ -20,9 +21,10 @@ export default async function BulkRequestPage({ searchParams }: BulkRequestPageP
   const sp = await searchParams;
 
   // Fetch bulk products for the selector + the logged-in user's saved addresses
-  const [{ products: bulkProducts }, { user, addresses }] = await Promise.all([
+  const [{ products: bulkProducts }, { user, addresses }, shopInfo] = await Promise.all([
     getProducts({ purchaseType: "bulk_quote" }),
     getCheckoutUser(),
+    getShopInfo(),
   ]);
 
   return (
@@ -94,22 +96,22 @@ export default async function BulkRequestPage({ searchParams }: BulkRequestPageP
                 </p>
                 <div className="space-y-3 text-sm">
                   <a
-                    href={`tel:${brand.phone.replace(/\s/g, "")}`}
+                    href={`tel:${shopInfo.phone.replace(/\s/g, "")}`}
                     className="flex items-center gap-2 text-white hover:text-gold transition-colors"
                   >
                     <Phone className="h-4 w-4 flex-shrink-0" />
-                    {brand.phone}
+                    {shopInfo.phone}
                   </a>
                   <a
-                    href={`mailto:${brand.email}`}
+                    href={`mailto:${shopInfo.email}`}
                     className="flex items-center gap-2 text-white hover:text-gold transition-colors"
                   >
                     <Mail className="h-4 w-4 flex-shrink-0" />
-                    {brand.email}
+                    {shopInfo.email}
                   </a>
                   <div className="flex items-start gap-2 text-white/70">
                     <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                    {brand.address}
+                    {shopInfo.address}
                   </div>
                 </div>
               </div>

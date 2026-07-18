@@ -3,6 +3,7 @@ import { Truck, Clock, MapPin, Package } from "lucide-react";
 import { Container } from "@/components/shared/Container";
 import { FadeIn } from "@/components/shared/FadeIn";
 import { brand } from "@/lib/brand";
+import { getShopInfo } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Delivery Information",
@@ -30,7 +31,9 @@ const zones = [
   },
 ];
 
-export default function DeliveryInfoPage() {
+export default async function DeliveryInfoPage() {
+  const shopInfo = await getShopInfo();
+
   return (
     <>
       <section className="py-16 bg-green-deep text-white">
@@ -91,7 +94,7 @@ export default function DeliveryInfoPage() {
                     {
                       icon: MapPin,
                       title: "Store Address",
-                      desc: brand.address,
+                      desc: shopInfo.address,
                     },
                     {
                       icon: Truck,

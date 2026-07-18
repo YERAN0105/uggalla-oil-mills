@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import { Container } from "@/components/shared/Container";
 import { FadeIn } from "@/components/shared/FadeIn";
 import { brand } from "@/lib/brand";
+import { getShopInfo } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: `Privacy policy for ${brand.name}.`,
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const shopInfo = await getShopInfo();
   return (
     <>
       <section className="py-16 bg-green-deep text-white">
@@ -59,8 +61,8 @@ export default function PrivacyPage() {
               <p>
                 You have the right to access, correct, or delete your personal data at any time.
                 Contact us at{" "}
-                <a href={`mailto:${brand.email}`} className="text-green hover:underline">
-                  {brand.email}
+                <a href={`mailto:${shopInfo.email}`} className="text-green hover:underline">
+                  {shopInfo.email}
                 </a>{" "}
                 to exercise these rights.
               </p>
