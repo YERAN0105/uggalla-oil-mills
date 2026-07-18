@@ -118,7 +118,7 @@ export function ImageCardStack({
   const reserve = GAP[orientation] + 6;
 
   return (
-    <div className={cn("w-full select-none", className)}>
+    <div className={cn("isolate w-full select-none", className)}>
       <div
         ref={containerRef}
         role="group"
