@@ -6,7 +6,7 @@
 // layout: `const gate = await MaintenanceGate(); if (gate) return gate;`
 
 import { createClient } from "@/lib/supabase/server";
-import { getSetting } from "@/lib/settings";
+import { getSetting, getShopInfo } from "@/lib/settings";
 import { brand } from "@/lib/brand";
 import { DropletSVG } from "@/components/shared/DropletSVG";
 import type { MaintenanceSettings } from "@/types/admin";
@@ -14,6 +14,8 @@ import type { MaintenanceSettings } from "@/types/admin";
 export async function MaintenanceGate(): Promise<React.ReactNode | null> {
   const maintenance = await getSetting<MaintenanceSettings>("maintenance", { enabled: false, message: "" });
   if (!maintenance.enabled) return null;
+
+  const shopInfo = await getShopInfo();
 
   // Admins bypass maintenance mode.
   try {
@@ -37,7 +39,7 @@ export async function MaintenanceGate(): Promise<React.ReactNode | null> {
         {maintenance.message?.trim() || "We're doing a little maintenance and will be back shortly. Thank you for your patience."}
       </p>
       <p className="mt-6 text-sm text-muted-foreground">
-        {brand.email} · {brand.phone}
+        {shopInfo.email} · {shopInfo.phone}
       </p>
     </div>
   );
