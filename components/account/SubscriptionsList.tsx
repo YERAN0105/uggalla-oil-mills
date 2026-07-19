@@ -148,20 +148,40 @@ function SubscriptionCard({ sub }: { sub: AccountSubscription }) {
                 {sub.size_price != null ? ` · ${formatCurrency(sub.size_price)}` : ""}
               </p>
             </div>
-            <Badge variant={isCancelled ? "destructive" : isPaused ? "secondary" : "sage"}>
-              {isCancelled ? "Cancelled" : isPaused ? "Paused" : "Active"}
+            <Badge
+              variant={
+                isCancelled
+                  ? "destructive"
+                  : !sub.is_available
+                    ? "secondary"
+                    : isPaused
+                      ? "secondary"
+                      : "sage"
+              }
+            >
+              {isCancelled
+                ? "Cancelled"
+                : !sub.is_available
+                  ? "Unavailable"
+                  : isPaused
+                    ? "Paused"
+                    : "Active"}
             </Badge>
           </div>
 
           {!isCancelled && (
             <p className="mt-1 text-xs text-muted-foreground">
               {INTERVAL_LABEL[sub.interval]} ·{" "}
-              {isPaused ? "Reminders paused" : `Next reminder ${formatShortDate(sub.next_reminder_date)}`}
+              {isPaused || !sub.is_available
+                ? "Reminders paused"
+                : `Next reminder ${formatShortDate(sub.next_reminder_date)}`}
             </p>
           )}
 
           {!sub.is_available && !isCancelled && (
-            <p className="mt-1 text-xs font-medium text-red-600">No longer available</p>
+            <p className="mt-1 text-xs font-medium text-red-600">
+              This product is no longer available to buy.
+            </p>
           )}
 
           {/* Actions */}
