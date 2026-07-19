@@ -30,7 +30,10 @@ async function run() {
 
   const { data: subs, error } = await db
     .from("subscriptions")
-    .select("id, user_id, product_id, interval, next_reminder_date, products:product_id(name)")
+    .select(
+      `id, user_id, product_id, interval, next_reminder_date,
+       products:product_id(name, is_published, deleted_at, stock_tracked, stock_quantity)`
+    )
     .eq("status", "active")
     .lte("next_reminder_date", today)
     .limit(BATCH);
@@ -42,9 +45,23 @@ async function run() {
 
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
 
   for (const sub of (subs as any[]) ?? []) {
     try {
+      // Don't nudge customers to reorder a product they can't buy. Mirror the
+      // availability rule used on the account page (getAccountSubscriptions).
+      // Skip WITHOUT advancing next_reminder_date so the reminder auto-resumes
+      // if the product is republished / restocked — handles both a temporary
+      // stock-out and a permanent removal without ever sending a dead reminder.
+      const p = sub.products;
+      const available =
+        !!p && p.is_published && !p.deleted_at && (!p.stock_tracked || p.stock_quantity > 0);
+      if (!available) {
+        skipped += 1;
+        continue;
+      }
+
       const { data: authUser } = await db.auth.admin.getUserById(sub.user_id);
       const email = authUser?.user?.email ?? null;
       const { data: profile } = await db
@@ -77,7 +94,7 @@ async function run() {
     }
   }
 
-  return NextResponse.json({ ok: true, processed: (subs as any[])?.length ?? 0, sent, failed });
+  return NextResponse.json({ ok: true, processed: (subs as any[])?.length ?? 0, sent, skipped, failed });
 }
 
 export async function POST(request: Request) {

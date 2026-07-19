@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addDays, format as formatDate } from "date-fns";
+import { addDays, format as formatDate, parseISO } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { reverseLoyaltyForOrder } from "@/lib/loyalty/engine";
@@ -115,7 +115,7 @@ export async function setDefaultAddress(id: string): Promise<ActionResult> {
 async function ownSubscription(admin: ReturnType<typeof createAdminClient>, userId: string, id: string) {
   const { data } = await admin
     .from("subscriptions")
-    .select("id, interval, status")
+    .select("id, interval, status, next_reminder_date")
     .eq("id", id)
     .eq("user_id", userId)
     .maybeSingle();
@@ -155,8 +155,21 @@ export async function changeSubscriptionFrequency(
   const sub = await ownSubscription(admin, userId, id);
   if (!sub) return { ok: false, error: "Subscription not found." };
 
-  const days = INTERVAL_DAYS[interval] ?? 30;
-  const next = formatDate(addDays(nowInColombo(), days), "yyyy-MM-dd");
+  // Keep the schedule anchored to its existing rhythm: the current
+  // next_reminder_date is always (anchor + old interval), so subtract the old
+  // interval and add the new one. Roll forward if the result is already past
+  // (e.g. monthly → weekly late in the cycle) so the reminder never fires
+  // immediately on an edit.
+  const oldDays = INTERVAL_DAYS[sub.interval] ?? 30;
+  const newDays = INTERVAL_DAYS[interval] ?? 30;
+  const today = formatDate(nowInColombo(), "yyyy-MM-dd");
+  let nextDate = sub.next_reminder_date
+    ? addDays(parseISO(sub.next_reminder_date), newDays - oldDays)
+    : addDays(nowInColombo(), newDays);
+  while (formatDate(nextDate, "yyyy-MM-dd") <= today) {
+    nextDate = addDays(nextDate, newDays);
+  }
+  const next = formatDate(nextDate, "yyyy-MM-dd");
   const { error } = await admin
     .from("subscriptions")
     .update({ interval, next_reminder_date: next })
