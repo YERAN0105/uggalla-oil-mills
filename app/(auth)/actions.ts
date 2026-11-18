@@ -118,8 +118,11 @@ export async function forgotPassword(formData: FormData) {
   const supabase = await createClient();
   const email = formData.get("email") as string;
 
+  // Route through /auth/callback so the emailed `code` is exchanged for a
+  // session before the reset form loads — otherwise updateUser() fails with
+  // "Auth session missing!".
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`,
+    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
   });
 
   if (error) {
